@@ -62,14 +62,18 @@ export default function Cobrar() {
 
       try {
         // Hacemos el envío real al endpoint de Node.js
-        const respuesta = await fetch("http://localhost:3000/send", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            number: usuario.numero, // Mapea al 'number' del backend
-            message: mensajeCompleto, // Envía el mensaje completo armado
-          }),
-        });
+        //        const respuesta = await fetch("http://localhost:3000/send",
+        const respuesta = await fetch(
+          "https://backend-whatsapp-docker.onrender.com",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              number: usuario.numero, // Mapea al 'number' del backend
+              message: mensajeCompleto, // Envía el mensaje completo armado
+            }),
+          },
+        );
 
         const datos = await respuesta.json();
         console.log(`Respuesta del servidor para ${usuario.nombre}:`, datos);

@@ -1,0 +1,92 @@
+/* frontend/src/index.css */
+body {
+  font-family: Arial, sans-serif;
+  background-color: #f4f7f6;
+  color: #333;
+  margin: 0;
+}
+.card {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+.form-group {
+  margin-bottom: 15px;
+  display: flex;
+  flex-direction: column;
+}
+label {
+  font-weight: bold;
+  margin-bottom: 5px;
+  font-size: 14px;
+}
+input {
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+}
+button {
+  padding: 12px 20px;
+  font-size: 15px;
+  font-weight: bold;
+  cursor: pointer;
+  border: none;
+  border-radius: 5px;
+  transition: 0.3s;
+}
+.btn-qr {
+  background: #3498db;
+  color: white;
+}
+.btn-qr:hover {
+  background: #2980b9;
+}
+.btn-send {
+  background: #25d366;
+  color: white;
+}
+.btn-send:hover {
+  background: #128c7e;
+}
+.btn-add {
+  background: #2c3e50;
+  color: white;
+  width: 100%;
+  margin-top: 10px;
+}
+.btn-add:hover {
+  background: #1a252f;
+}
+.btn-template {
+  background: #e67e22;
+  color: white;
+  width: 100%;
+  margin-top: 10px;
+}
+.btn-template:hover {
+  background: #d35400;
+}
+#qr-container {
+  margin: 10px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+ul {
+  padding-left: 20px;
+  margin: 10px 0 0 0;
+}
+li {
+  margin-bottom: 8px;
+  font-size: 15px;
+}
+.preview-box {
+  background: #eef2f3;
+  padding: 10px;
+  border-left: 5px solid #e67e22;
+  margin-top: 10px;
+  font-style: italic;
+  border-radius: 4px;
+}

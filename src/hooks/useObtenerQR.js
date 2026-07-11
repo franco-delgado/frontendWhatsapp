@@ -2,7 +2,7 @@
 import { useState } from "react";
 
 export function useObtenerQR() {
-  const [estado, setEstado] = useState("disconnected"); // Coincide con tu backend
+  const [estado, setEstado] = useState("disconnected");
   const [qrCode, setQrCode] = useState("");
   const [qrMsg, setQrMsg] = useState("");
   const [cargando, setCargando] = useState(false);
@@ -19,11 +19,11 @@ export function useObtenerQR() {
     setQrMsg("Consultando código en el servidor...");
 
     try {
-      // 1. Consultamos el estado usando los nombres correctos
+      // 1. Consultamos el estado general del backend
       const resStatus = await fetch(`${API_URL}/status`);
       const dataStatus = await resStatus.json();
 
-      // Sincronizamos con la propiedad '.status' del backend
+      // Sincronizamos el estado con la propiedad '.status' que devuelve tu Node
       setEstado(dataStatus.status);
 
       if (dataStatus.status === "connecting") {
@@ -40,24 +40,20 @@ export function useObtenerQR() {
         return;
       }
 
-      // 2. Si el estado es "qr", pegamos al endpoint correcto del backend ('/qr')
-      const res = await fetch(`${API_URL}/qr`);
-      const data = await res.json();
-
-      if (!data.qr) {
+      // 2. Si el estado es "qr", procesamos la propiedad '.qr' que viene en el mismo JSON
+      if (dataStatus.status === "qr" && dataStatus.qr) {
+        setQrMsg("¡Listo! Escaneá este código:");
+        setQrCode(dataStatus.qr); // Contiene el string base64 o url de la imagen
+      } else {
         setQrMsg(
           "WhatsApp todavía no generó el código. Esperá unos segundos y reintentá.",
         );
-        return;
       }
-
-      setQrMsg("¡Listo! Escaneá este código:");
-      setQrCode(data.qr); // data.qr contiene el string base64 o la url de la imagen
     } catch (err) {
       console.error(err);
       setQrMsg("Error al conectar con el servidor.");
     } finally {
-      setCargando(false);
+      setCargando(false); // <-- Línea 56 corregida e impecable
     }
   };
 

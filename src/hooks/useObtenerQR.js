@@ -23,19 +23,21 @@ export function useObtenerQR() {
       const resStatus = await fetch(`${API_URL}/status`);
       const dataStatus = await resStatus.json();
 
-      // Sincronizamos usando '.estado' tal cual viene de tu backend en Render
-      setEstado(dataStatus.estado);
+      // Sincronizamos usando '.status' que es la propiedad real de tu backend
+      const statusActual = dataStatus.status || "disconnected";
+      setEstado(statusActual);
 
-      // 2. Evaluamos según los strings reales de tu backend
-      if (dataStatus.estado === "CONECTADO" || dataStatus.connected === true) {
+      // 2. Evaluamos según los strings reales de tu backend en Render
+      if (statusActual === "connected") {
         setQrMsg("¡WhatsApp ya está conectado de forma exitosa!");
         setCargando(false);
         return;
       }
 
-      if (dataStatus.estado === "ESPERANDO_QR" && dataStatus.qr) {
+      if (statusActual === "qr") {
+        // Buscamos la imagen QR directamente desde el endpoint del backend
         setQrMsg("¡Listo! Escaneá este código:");
-        setQrCode(dataStatus.qr); // Asigna la URL de api.qrserver.com directamente
+        setQrCode(`${API_URL}/qr/image`);
       } else {
         setQrMsg(
           "El servidor se está iniciando o WhatsApp aún no generó el código. Esperá un momento y reintentá.",

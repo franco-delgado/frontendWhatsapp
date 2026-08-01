@@ -1,6 +1,6 @@
-/* src/Invitar.css */
+/* src/cobrar/Cobrar.css */
 
-.invitar-container {
+.cobrar-container {
   margin-top: 20px;
   padding: 20px;
   background-color: #ffffff;
@@ -9,11 +9,38 @@
   text-align: left;
 }
 
-.invitar-title {
+.cobrar-title {
   font-size: 20px;
   color: #333;
   margin-bottom: 15px;
   text-align: center;
+}
+
+.filter-box {
+  background-color: #fff3cd;
+  border: 1px solid #ffeeba;
+  padding: 12px;
+  border-radius: 6px;
+  margin-bottom: 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.btn-filter {
+  background-color: #ffc107;
+  color: #000;
+  border: none;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: bold;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-filter:hover {
+  background-color: #e0a800;
 }
 
 .input-group {
@@ -37,9 +64,15 @@
   box-sizing: border-box;
 }
 
+.variable-badge {
+  background-color: #eee;
+  font-style: italic;
+  font-weight: bold;
+}
+
 .preview-box {
-  background-color: #f0f7f4;
-  border-left: 4px solid #25d366;
+  background-color: #fcf8e3;
+  border-left: 4px solid #ffc107;
   padding: 10px;
   margin: 15px 0;
   border-radius: 4px;
@@ -51,8 +84,8 @@
   color: #333;
 }
 
-.btn-enviar {
-  background-color: #007bff;
+.btn-enviar-cobros {
+  background-color: #28a745;
   color: white;
   border: none;
   padding: 12px;
@@ -62,10 +95,11 @@
   cursor: pointer;
   width: 100%;
   margin-bottom: 20px;
+  transition: background 0.2s;
 }
 
-.btn-enviar:hover {
-  background-color: #0056b3;
+.btn-enviar-cobros:hover {
+  background-color: #218838;
 }
 
 .usuarios-section h3 {
@@ -106,4 +140,10 @@
 .usuario-info {
   font-size: 14px;
   color: #333;
+}
+
+.deuda-tag {
+  color: #d9534f;
+  font-weight: bold;
+  margin-left: 8px;
 }

@@ -1,10 +1,12 @@
 // src/App.jsx
 import { useState } from "react";
 import { useObtenerQR } from "./hooks/useObtenerQR";
-import Invitar from "./invitar/Invitar"; // Ajustado a tu estructura de carpetas
+import Invitar from "./invitar/Invitar.jsx"; // Ajustado a tu estructura de carpetas
 import Contactos from "./contactos/Contactos.jsx";
 import Cobrar from "./cobrar/Cobrar";
+import { BandejaEntrada } from './components/BandejaEntrada';
 import "./App.css";
+import { BotonInstalar } from './components/BotonInstalar.jsx';
 
 function App() {
   const { obtenerQR, cargando, estado, qrCode, qrMsg } = useObtenerQR();
@@ -15,17 +17,20 @@ function App() {
 
   return (
     <div className="container">
+      <div className="app-container">
+      <header style={{ display: 'flex', justifyContent: 'space-between', padding: '15px' }}>
+        <h1>Panel WhatsApp</h1>
+        {/* Renderiza el botón aquí */}
+        <BotonInstalar />
+      </header>
+      
+      {/* Resto de tus módulos (BandejaEntrada, Cobrar, Contactos, etc.) */}
+    </div>
       {/* BOTÓN VOLVER ATRÁS (Solo se muestra si NO estás en el inicio) */}
       {seccionActiva !== "inicio" && (
         <button
-          className="button-action"
-          style={{
-            width: "auto",
-            padding: "6px 12px",
-            fontSize: "14px",
-            float: "left",
-            marginBottom: "10px",
-          }}
+          className="button-action-volver"
+          
           onClick={() => setSeccionActiva("inicio")}
         >
           ⬅️ Volver
@@ -46,7 +51,7 @@ function App() {
       {/* SECCIÓN DEL QR (Se muestra siempre arriba en la home) */}
       {seccionActiva === "inicio" && (
         <div className="qr-section">
-          <button
+         {/* <button
             onClick={obtenerQR}
             disabled={cargando}
             className="button-primary"
@@ -64,7 +69,7 @@ function App() {
             <div className="qr-container">
               <img src={qrCode} alt="Código QR WhatsApp" className="qr-image" />
             </div>
-          )}
+          )} */}
         </div>
       )}
 
@@ -112,6 +117,8 @@ function App() {
           👤 Contactos
         </button>
       </div>
+      <hr />
+      <BandejaEntrada />
     </div>
   );
 }

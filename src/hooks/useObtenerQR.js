@@ -13,7 +13,7 @@ export function useObtenerQR() {
       ? "http://localhost:3000"
       : "https://backend-whatsapp-docker.onrender.com";
 
-  const obtenerQR = async () => {
+ /* const obtenerQR = async () => {
     setCargando(true);
     setQrCode("");
     setQrMsg("Consultando código en el servidor...");
@@ -49,10 +49,10 @@ export function useObtenerQR() {
     } finally {
       setCargando(false);
     }
-  };
+  };*/
 
   return {
-    obtenerQR,
+  //  obtenerQR,
     cargando,
     estado,
     setEstado,

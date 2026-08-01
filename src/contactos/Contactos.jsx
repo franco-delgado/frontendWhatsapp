@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import "./Contactos.css"; // Asegúrate de apuntar correctamente a la ruta de tu archivo CSS
+import "./Contactos.css";
 
 export default function Contactos() {
   // Estado para la lista de contactos
@@ -8,13 +8,25 @@ export default function Contactos() {
     return guardados ? JSON.parse(guardados) : [];
   });
 
+  // Limpieza automática de contactos viejos guardados en localStorage con símbolos (+, -, espacios)
+  useEffect(() => {
+    const contactosLimpios = contactos.map((c) => ({
+      ...c,
+      numero: String(c.numero).replace(/\D/g, ""),
+    }));
+
+    if (JSON.stringify(contactosLimpios) !== JSON.stringify(contactos)) {
+      setContactos(contactosLimpios);
+    }
+  }, []);
+
   // Estados para el formulario de creación
   const [nombre, setNombre] = useState("");
   const [numero, setNumero] = useState("");
   const [monto, setMonto] = useState("");
 
   // ESTADOS PARA LA EDICIÓN
-  const [idEditando, setIdEditando] = useState(null); // Guarda el ID del contacto que se está editando
+  const [idEditando, setIdEditando] = useState(null);
   const [nombreEditado, setNombreEditado] = useState("");
   const [numeroEditado, setNumeroEditado] = useState("");
   const [montoEditado, setMontoEditado] = useState("");
@@ -32,10 +44,13 @@ export default function Contactos() {
       return;
     }
 
+    // Deja ÚNICAMENTE dígitos numéricos
+    const numeroLimpio = numero.replace(/\D/g, "");
+
     const nuevoContacto = {
       id: Date.now(),
       nombre,
-      numero: numero.replace(/\s+/g, ""),
+      numero: numeroLimpio,
       monto: parseFloat(monto),
     };
 
@@ -60,12 +75,15 @@ export default function Contactos() {
       return;
     }
 
+    // Deja ÚNICAMENTE dígitos numéricos
+    const numeroLimpio = numeroEditado.replace(/\D/g, "");
+
     const contactosActualizados = contactos.map((c) => {
       if (c.id === id) {
         return {
           ...c,
           nombre: nombreEditado,
-          numero: numeroEditado.replace(/\s+/g, ""),
+          numero: numeroLimpio,
           monto: parseFloat(montoEditado),
         };
       }
@@ -79,19 +97,12 @@ export default function Contactos() {
   // Función para eliminar un contacto
   const handleEliminar = (id) => {
     const confirmar = window.confirm(
-      "¿Estás seguro de que deseas eliminar este contacto?",
+      "¿Estás seguro de que deseas eliminar este contacto?"
     );
     if (confirmar) {
       const filtrados = contactos.filter((c) => c.id !== id);
       setContactos(filtrados);
     }
-  };
-
-  // Función para redirigir a WhatsApp
-  const enviarMensajeWhatsApp = (contacto) => {
-    const mensaje = `Hola ${contacto.nombre}, te escribo para recordarte el pago pendiente de $${contacto.monto}.`;
-    const url = `https://api.whatsapp.com/send?phone=${contacto.numero}&text=${encodeURIComponent(mensaje)}`;
-    window.open(url, "_blank");
   };
 
   return (
@@ -109,7 +120,7 @@ export default function Contactos() {
         />
         <input
           type="text"
-          placeholder="Número (Ej: 5491122334455)"
+          placeholder="Número (Ej: 5493827402013)"
           value={numero}
           onChange={(e) => setNumero(e.target.value)}
           className="form-input"
@@ -178,12 +189,12 @@ export default function Contactos() {
                   <span className="contacto-monto">Deuda: ${c.monto}</span>
                 </div>
                 <div className="contacto-acciones">
-                  <button
+                  {/*<button
                     onClick={() => enviarMensajeWhatsApp(c)}
                     className="btn-whatsapp"
                   >
                     📱 Mensaje
-                  </button>
+                  </button>*/}
                   <button
                     onClick={() => activarEdicion(c)}
                     className="btn-cancelar"

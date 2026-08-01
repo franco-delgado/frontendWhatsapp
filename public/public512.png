@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#25D366;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#128C7E;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <!-- Fondo Redondeado -->
+  <rect width="512" height="512" rx="110" fill="url(#grad)" />
+  
+  <!-- Burbuja de WhatsApp -->
+  <path fill="#ffffff" d="M256 90c-91.7 0-166 74.3-166 166 0 30.2 8.1 59.7 23.5 85.5L90 422l83.6-22.9C198 412.8 226.5 422 256 422c91.7 0 166-74.3 166-166S347.7 90 256 90z" />
+  
+  <!-- Simbolo Dashboard / Gestión Interno -->
+  <path fill="#128C7E" d="M200 210h112c8.3 0 15 6.7 15 15v100c0 8.3-6.7 15-15 15H200c-8.3 0-15-6.7-15-15V225c0-8.3 6.7-15 15-15z" />
+  <path fill="#25D366" d="M220 280h24v40h-24zm32-30h24v70h-24zm32 15h24v55h-24z" />
+  <circle cx="256" cy="165" r="22" fill="#128C7E" />
+</svg>

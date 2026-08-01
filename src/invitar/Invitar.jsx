@@ -1,28 +1,25 @@
-// src/invitar/Invitar.jsx
 import { useState, useEffect } from "react";
-import "./Invitar.css"; // Importamos sus estilos
+import { useEnviarWhatsApp } from "../hooks/useEnviarWhatsApp";
+import "./Invitar.css";
 
 export default function Invitar() {
-  const [primeraParte, setPrimeraParte] = useState("Hola ");
-  const [segundaParte, setSegundaParte] = useState(
-    ", te invitamos a nuestro próximo evento.",
-  );
-
-  // 1. Cargamos los contactos reales desde localStorage
   const [contactos, setContactos] = useState(() => {
     const guardados = localStorage.getItem("contactos_whatsapp");
     return guardados ? JSON.parse(guardados) : [];
   });
 
-  // Guardamos las IDs de los usuarios seleccionados
   const [seleccionados, setSeleccionados] = useState([]);
+  
+  // Estados para las variables dinámicas de la plantilla
+  const [headerTexto, setHeaderTexto] = useState(""); // Variable {{1}} (Header / Título)
+  const [remitente, setRemitente] = useState("");     // Variable {{2}} (Cuerpo / Nombre de quien escribe)
 
-  // 2. Sincronizamos los seleccionados cuando se cargan los contactos por primera vez
+  const { enviarMasivo, loading: cargando } = useEnviarWhatsApp();
+
   useEffect(() => {
     setSeleccionados(contactos.map((c) => c.id));
   }, [contactos]);
 
-  // Manejar el check/uncheck de cada usuario
   const manejarSeleccion = (id) => {
     if (seleccionados.includes(id)) {
       setSeleccionados(seleccionados.filter((item) => item !== id));
@@ -31,113 +28,150 @@ export default function Invitar() {
     }
   };
 
-  // Envío masivo real usando el backend
   const enviarInvitaciones = async () => {
     const listaAEnviar = contactos.filter((c) => seleccionados.includes(c.id));
 
     if (listaAEnviar.length === 0) {
-      alert("Por favor, selecciona al menos un contacto de la lista.");
+      alert("Por favor, selecciona al menos un contacto.");
       return;
     }
 
-    alert(
-      `Iniciando el envío de ${listaAEnviar.length} mensajes a través de WhatsApp...`,
-    );
+    // Validamos que los textos no estén vacíos
+    const headerValido =
+      headerTexto && String(headerTexto).trim() !== ""
+        ? String(headerTexto).trim()
+        : "FARMANOR";
 
-    // Recorremos los seleccionados uno por uno
-    for (const usuario of listaAEnviar) {
-      const mensajeCompleto = `${primeraParte}${usuario.nombre}${segundaParte}`;
+    const remitenteValido =
+      remitente && String(remitente).trim() !== ""
+        ? String(remitente).trim()
+        : "un representante";
 
-      console.log(`Enviando a ${usuario.numero}: "${mensajeCompleto}"`);
+    const contactsPayload = listaAEnviar.map((usuario) => {
+      let numeroLimpio = usuario.numero.replace(/\D/g, "");
 
-      try {
-        // Hacemos el envío real al endpoint de Node.js
-        //        const respuesta = await fetch("http://localhost:3000/send",
-        const respuesta = await fetch(
-          "https://backend-whatsapp-docker.onrender.com/send",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              number: usuario.numero, // Enviamos el número al backend
-              message: mensajeCompleto, // Enviamos el mensaje armado
-            }),
-          },
-        );
-
-        const datos = await respuesta.json();
-        console.log(`Respuesta del servidor para ${usuario.nombre}:`, datos);
-
-        // Agregamos una pequeña pausa de 3 segundos entre envíos para simular comportamiento humano
-        await new Promise((resolve) => setTimeout(resolve, 3000));
-      } catch (err) {
-        console.error("Error de conexión al enviar a " + usuario.nombre, err);
+      if (numeroLimpio.includes("3827402013")) {
+        numeroLimpio = "54382715402013";
       }
-    }
 
-    alert(
-      "¡Proceso de envío terminado! Revisá tu WhatsApp o la consola de Node.js 🚀",
-    );
+      return {
+        number: numeroLimpio,
+        type: "template",
+        templateName: "invitacion",
+        languageCode: "es_AR",
+        // [{{1}} = Header / Título, {{2}} = Remitente en el texto]
+        parameters: [headerValido, remitenteValido],
+      };
+    });
+
+    try {
+      const datos = await enviarMasivo(contactsPayload);
+
+      if (datos.success) {
+        alert(
+          `¡Invitaciones enviadas con éxito! Procesados: ${datos.processed} envíos. 🚀`
+        );
+        console.log("Detalle del resultado:", datos.results);
+      }
+    } catch (err) {
+      console.error("Error al procesar el envío:", err);
+      alert(`Ocurrió un error en el envío: ${err.message}`);
+    }
   };
 
   return (
     <div className="invitar-container">
       <h2 className="invitar-title">📧 Enviar Invitaciones Masivas</h2>
 
-      {/* INPUT 1 */}
-      <div className="input-group">
-        <label>Primera parte del mensaje:</label>
-        <input
-          type="text"
-          value={primeraParte}
-          onChange={(e) => setPrimeraParte(e.target.value)}
-          className="input-text"
-          placeholder="Ej: Hola "
-        />
+      {/* Inputs para configurar las variables de la plantilla */}
+      <div className="inputs-variables-box" style={{ display: "flex", gap: "15px", marginBottom: "15px" }}>
+        
+        {/* Input Variable {{1}}: Header */}
+        <div style={{ flex: 1 }}>
+          <label
+            htmlFor="headerTexto"
+            style={{ display: "block", fontWeight: "bold", marginBottom: "5px" }}
+          >
+            Título / Header (headerValido):
+          </label>
+          <input
+            id="headerTexto"
+            type="text"
+            placeholder="Ej: Novedades / FARMANOR"
+            value={headerTexto}
+            onChange={(e) => setHeaderTexto(e.target.value)}
+            style={{
+              width: "100%",
+              padding: "8px 12px",
+              borderRadius: "5px",
+              border: "1px solid #ccc",
+              fontSize: "14px",
+            }}
+          />
+        </div>
+
+        {/* Input Variable {{2}}: Remitente */}
+        <div style={{ flex: 1 }}>
+          <label
+            htmlFor="remitente"
+            style={{ display: "block", fontWeight: "bold", marginBottom: "5px" }}
+          >
+            Tu Nombre (headerTexto):
+          </label>
+          <input
+            id="remitente"
+            type="text"
+            placeholder="Ej: Juan Pérez"
+            value={remitente}
+            onChange={(e) => setRemitente(e.target.value)}
+            style={{
+              width: "100%",
+              padding: "8px 12px",
+              borderRadius: "5px",
+              border: "1px solid #ccc",
+              fontSize: "14px",
+            }}
+          />
+        </div>
+
       </div>
 
-      {/* INDICADOR VISUAL DEL NOMBRE */}
-      <div className="input-group">
-        <label>Variable intermedia:</label>
-        <input
-          type="text"
-          value="[NOMBRE_USUARIO]"
-          disabled
-          className="input-text"
-          style={{ backgroundColor: "#eee", fontStyle: "italic" }}
-        />
-      </div>
-
-      {/* INPUT 2 */}
-      <div className="input-group">
-        <label>Segunda parte del mensaje:</label>
-        <input
-          type="text"
-          value={segundaParte}
-          onChange={(e) => setSegundaParte(e.target.value)}
-          className="input-text"
-          placeholder="Ej: , tenés un turno mañana."
-        />
-      </div>
-
-      {/* VISTA PREVIA */}
+      {/* Vista Previa de la plantilla */}
       <div className="preview-box">
-        <p>
-          <strong>Ejemplo de cómo se verá:</strong>
+        <p style={{ margin: "0 0 8px 0", fontSize: "12px", color: "#666" }}>
+          <strong>Vista previa de la Plantilla:</strong>
         </p>
-        <p>
-          "{primeraParte}Juan{segundaParte}"
+
+        {/* Título en grande simulando la cabecera de Meta */}
+        <h4 style={{ margin: "0 0 10px 0", color: "#007bff", fontSize: "16px" }}>
+          {headerTexto.trim() || "[Texto del Título / Header]"}
+        </h4>
+
+        <p style={{ margin: 0, lineHeight: "1.5" }}>
+          "Saludos mi nombre es{" "}
+          <strong style={{ color: "#28a745" }}>
+            {remitente.trim() || "[Tu Nombre]"}
+          </strong>
+          . Te escribo para contarte que en FARMANOR podes acceder a tu cuenta
+          corriente solo con tu DNI, foto de algun servicio y recibo de sueldo.
+          Con tu cuenta corriente podes comprar en cualquiera de nuestras 16
+          sucursales, ademas tenes importantes descuento de hasta el 40% en
+          medicamentos de nuestro vademecum."
         </p>
       </div>
 
-      {/* BOTÓN ENVIAR */}
-      <button onClick={enviarInvitaciones} className="btn-enviar">
-        Enviar Mensajes ({seleccionados.length})
+      <button
+        onClick={enviarInvitaciones}
+        disabled={cargando}
+        className="btn-enviar-cobros"
+      >
+        {cargando
+          ? "Enviando invitaciones..."
+          : `Enviar Recordatorios (${seleccionados.length})`}
       </button>
 
-      {/* LISTADO DE USUARIOS CON CHECKBOX */}
       <div className="usuarios-section">
-        <h3>Seleccionar Destinatarios</h3>
+        <h3>Contactos Disponibles</h3>
         <div className="usuarios-lista">
           {contactos.map((usuario) => (
             <div key={usuario.id} className="usuario-item">
@@ -148,18 +182,16 @@ export default function Invitar() {
               />
               <div className="usuario-info">
                 <strong>{usuario.nombre}</strong> ({usuario.numero})
-                {usuario.monto > 0 && (
-                  <span
-                    style={{
-                      color: "#d9534f",
-                      fontSize: "12px",
-                      marginLeft: "8px",
-                    }}
-                  >
-                    {" "}
-                    (Deuda: ${usuario.monto})
-                  </span>
-                )}
+                <span
+                  className="deuda-tag"
+                  style={{
+                    marginLeft: "10px",
+                    fontWeight: "bold",
+                    color: usuario.monto > 0 ? "#d9534f" : "#5cb85c",
+                  }}
+                >
+                  Deuda: ${usuario.monto}
+                </span>
               </div>
             </div>
           ))}
@@ -173,8 +205,7 @@ export default function Invitar() {
                 margin: "10px 0",
               }}
             >
-              No hay contactos guardados. Andá a la pestaña "Contactos" para
-              registrar el primero.
+              No hay contactos guardados en el sistema.
             </p>
           )}
         </div>

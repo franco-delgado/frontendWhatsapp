@@ -1,37 +1,24 @@
-// src/cobrar/Cobrar.jsx
 import { useState, useEffect } from "react";
-import "./Cobrar.css"; // Importamos sus estilos
+import { useEnviarWhatsApp } from "../hooks/useEnviarWhatsApp";
+import "./Cobrar.css";
 
 export default function Cobrar() {
-  const [primeraParte, setPrimeraParte] = useState("Hola ");
-  const [segundaParte, setSegundaParte] = useState(
-    ", te recordamos que tenés un saldo pendiente de $",
-  );
-  const [terceraParte, setTerceraParte] = useState(
-    ". Por favor, realiza el pago lo antes posible.",
-  );
-
-  // Cargamos los contactos desde localStorage
   const [contactos, setContactos] = useState(() => {
     const guardados = localStorage.getItem("contactos_whatsapp");
     return guardados ? JSON.parse(guardados) : [];
   });
 
-  // Estado para los IDs seleccionados
   const [seleccionados, setSeleccionados] = useState([]);
+  
+  // Estado para el texto personalizado que se sumará al nombre del contacto
+  const [textoPersonalizado, setTextoPersonalizado] = useState("");
 
-  // Al cargar, seleccionamos todos por defecto
+  const { enviarMasivo, loading: cargando } = useEnviarWhatsApp();
+
   useEffect(() => {
     setSeleccionados(contactos.map((c) => c.id));
   }, [contactos]);
 
-  // FILTRO: Seleccionar automáticamente solo a los que deben dinero (monto > 0)
-  const filtrarSoloDeudores = () => {
-    const deudores = contactos.filter((c) => c.monto > 0);
-    setSeleccionados(deudores.map((c) => c.id));
-  };
-
-  // Manejar check individuales
   const manejarSeleccion = (id) => {
     if (seleccionados.includes(id)) {
       setSeleccionados(seleccionados.filter((item) => item !== id));
@@ -40,146 +27,103 @@ export default function Cobrar() {
     }
   };
 
-  // Envío masivo real usando el backend de Baileys 🚀
-  const enviarCobros = async () => {
+  const enviarCobro = async () => {
     const listaAEnviar = contactos.filter((c) => seleccionados.includes(c.id));
 
     if (listaAEnviar.length === 0) {
-      alert("Por favor, selecciona al menos un contacto.");
+      alert("Por favor, selecciona al menos un contacto de la lista.");
       return;
     }
 
-    alert(
-      `Iniciando el envío de ${listaAEnviar.length} recordatorios de cobro a través de WhatsApp...`,
-    );
+    const contactsPayload = listaAEnviar.map((usuario) => {
+      let numeroLimpio = usuario.numero.replace(/\D/g, "");
 
-    // Recorremos los seleccionados uno por uno
-    for (const usuario of listaAEnviar) {
-      // Estructuramos el mensaje completo intercalando nombre y monto
-      const mensajeCompleto = `${primeraParte}${usuario.nombre}${segundaParte}${usuario.monto}${terceraParte}`;
-
-      console.log(`Enviando cobro a ${usuario.numero}: "${mensajeCompleto}"`);
-
-      try {
-        // Hacemos el envío real al endpoint de Node.js
-        //        const respuesta = await fetch("http://localhost:3000/send",
-        const respuesta = await fetch(
-          "https://backend-whatsapp-docker.onrender.com/send",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              number: usuario.numero, // Mapea al 'number' del backend
-              message: mensajeCompleto, // Envía el mensaje completo armado
-            }),
-          },
-        );
-
-        const datos = await respuesta.json();
-        console.log(`Respuesta del servidor para ${usuario.nombre}:`, datos);
-
-        // Pausa preventiva de 3 segundos entre mensajes para simular comportamiento humano
-        await new Promise((resolve) => setTimeout(resolve, 3000));
-      } catch (err) {
-        console.error(
-          "Error de conexión al enviar cobro a " + usuario.nombre,
-          err,
-        );
+      if (numeroLimpio.includes("3827402013")) {
+        numeroLimpio = "54382715402013";
       }
-    }
 
-    alert("¡Proceso de envío de cobros terminado con éxito! 💰🚀");
+      const nombreCliente = usuario.nombre?.trim() || "Cliente";
+      const textoBase = textoPersonalizado.trim();
+
+      // Si hay texto personalizado, lo une al nombre (ej: "Estimado Juan"); de lo contrario solo usa el nombre
+      const variable1 = textoBase ? `${nombreCliente} ${textoBase}` : nombreCliente;
+
+      return {
+        number: numeroLimpio,
+        type: "template",
+        templateName: "mensaje_mensual",
+        languageCode: "es_AR",
+        parameters: [
+          variable1,                  // Variable {{1}} (Texto opcional + Nombre)
+          `$${usuario.monto || 0}`    // Variable {{2}} (Monto)
+        ],
+      };
+    });
+
+    try {
+      const datos = await enviarMasivo(contactsPayload);
+
+      if (datos.success) {
+        alert(`¡Mensajes enviados con éxito! Procesados: ${datos.processed} envíos. 🚀`);
+        console.log("Detalle del resultado:", datos.results);
+      }
+    } catch (err) {
+      console.error("Error al procesar el envío:", err);
+      alert(`Ocurrió un error en el envío: ${err.message}`);
+    }
   };
 
   return (
     <div className="cobrar-container">
       <h2 className="cobrar-title">💰 Recordatorio de Cobros Masivos</h2>
 
-      {/* CAJA DE FILTRO RÁPIDO */}
-      <div className="filter-box">
-        <span>¿Querés marcar solo a los que tienen deuda activa?</span>
-        <button
-          type="button"
-          onClick={filtrarSoloDeudores}
-          className="btn-filter"
+      {/* Input para agregar texto previo al nombre del cliente */}
+      <div className="input-texto-box" style={{ marginBottom: "15px" }}>
+        <label
+          htmlFor="textoPersonalizado"
+          style={{ display: "block", fontWeight: "bold", marginBottom: "5px" }}
         >
-          Filtrar Monto &gt; 0
-        </button>
-      </div>
-
-      {/* INPUT 1 */}
-      <div className="input-group">
-        <label>Parte 1 (Inicio del mensaje):</label>
+          Texto adicional previo al nombre del cliente:
+        </label>
         <input
+          id="textoPersonalizado"
           type="text"
-          value={primeraParte}
-          onChange={(e) => setPrimeraParte(e.target.value)}
-          className="input-text"
+          placeholder="Ej: Estimado/a, Sr/a, Hola..."
+          value={textoPersonalizado}
+          onChange={(e) => setTextoPersonalizado(e.target.value)}
+          style={{
+            width: "100%",
+            padding: "8px 12px",
+            borderRadius: "5px",
+            border: "1px solid #ccc",
+            fontSize: "14px",
+          }}
         />
       </div>
 
-      {/* VARIABLE NOMBRE */}
-      <div className="input-group">
-        <label>Variable Fija 1:</label>
-        <input
-          type="text"
-          value="[NOMBRE_CONTACTO]"
-          disabled
-          className="input-text variable-badge"
-        />
-      </div>
-
-      {/* INPUT 2 */}
-      <div className="input-group">
-        <label>Parte 2 (Conector intermedio):</label>
-        <input
-          type="text"
-          value={segundaParte}
-          onChange={(e) => setSegundaParte(e.target.value)}
-          className="input-text"
-        />
-      </div>
-
-      {/* VARIABLE MONTO */}
-      <div className="input-group">
-        <label>Variable Fija 2:</label>
-        <input
-          type="text"
-          value="[MONTO_A_COBRAR]"
-          disabled
-          className="input-text variable-badge"
-        />
-      </div>
-
-      {/* INPUT 3 */}
-      <div className="input-group">
-        <label>Parte 3 (Cierre del mensaje):</label>
-        <input
-          type="text"
-          value={terceraParte}
-          onChange={(e) => setTerceraParte(e.target.value)}
-          className="input-text"
-        />
-      </div>
-
-      {/* VISTA PREVIA CORREGIDA */}
       <div className="preview-box">
         <p>
-          <strong>Ejemplo de mensaje resultante:</strong>
+          <strong>Formato de Plantilla Meta (Business API):</strong>
         </p>
         <p>
-          "{primeraParte}Juan{segundaParte}15000${terceraParte}"
+          "Saludos{" "}
+          <strong style={{ color: "#007bff" }}>
+            {textoPersonalizado.trim() ? `[Nombre] ${textoPersonalizado.trim()}` : "[Nombre Del Cliente]"}
+          </strong>{" "}
+          le escribimos desde DFservice para informarle que su cuenta esta disponible con un monto de [<strong>$*****</strong>] para saldar. Recuerde saldarla antes del 15 para evitar intereses. Saludos☺️☺️"
         </p>
       </div>
 
-      {/* BOTÓN ENVIAR */}
-      <button onClick={enviarCobros} className="btn-enviar-cobros">
-        Enviar Recordatorios ({seleccionados.length})
+      <button 
+        onClick={enviarCobro} 
+        disabled={cargando} 
+        className="btn-enviar"
+      >
+        {cargando ? "Enviando invitaciones..." : `Enviar Mensajes (${seleccionados.length})`}
       </button>
 
-      {/* LISTADO DE SELECCIÓN */}
       <div className="usuarios-section">
-        <h3>Contactos Disponibles</h3>
+        <h3>Seleccionar Destinatarios</h3>
         <div className="usuarios-lista">
           {contactos.map((usuario) => (
             <div key={usuario.id} className="usuario-item">
@@ -190,16 +134,17 @@ export default function Cobrar() {
               />
               <div className="usuario-info">
                 <strong>{usuario.nombre}</strong> ({usuario.numero})
-                <span
-                  className="deuda-tag"
-                  style={{
-                    marginLeft: "10px",
-                    fontWeight: "bold",
-                    color: usuario.monto > 0 ? "#d9534f" : "#5cb85c",
-                  }}
-                >
-                  Deuda: ${usuario.monto}
-                </span>
+                {usuario.monto > 0 && (
+                  <span
+                    style={{
+                      color: "#d9534f",
+                      fontSize: "12px",
+                      marginLeft: "8px",
+                    }}
+                  >
+                    (Deuda: ${usuario.monto})
+                  </span>
+                )}
               </div>
             </div>
           ))}
@@ -213,7 +158,8 @@ export default function Cobrar() {
                 margin: "10px 0",
               }}
             >
-              No hay contactos guardados en el sistema.
+              No hay contactos guardados. Andá a la pestaña "Contactos" para
+              registrar el primero.
             </p>
           )}
         </div>

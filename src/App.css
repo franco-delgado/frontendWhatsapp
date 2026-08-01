@@ -100,6 +100,13 @@
   cursor: pointer;
   transition: all 0.2s;
 }
+.button-action-volver {
+  width: auto;
+  padding: 6px 12px;
+  font-size: 14px;
+  float: left;
+  margin-bottom: 10px;
+}
 
 .button-action:hover {
   background-color: #f0f0f0;

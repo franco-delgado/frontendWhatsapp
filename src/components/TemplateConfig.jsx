@@ -15,7 +15,7 @@ export default function TemplateConfig() {
   useEffect(() => {
     const chequearEstadoInicial = async () => {
       try {
-        const res = await fetch("http://localhost:3000/status");
+        const res = await fetch("https://backend-whatsapp-docker.onrender.com/status");
         const data = await res.json();
         if (data && data.estado) {
           setEstado(data.estado);
@@ -31,7 +31,7 @@ export default function TemplateConfig() {
   useEffect(() => {
     const obtenerPlantillaInicial = async () => {
       try {
-        const res = await fetch("http://localhost:3000/plantilla");
+        const res = await fetch("https://backend-whatsapp-docker.onrender.com/plantilla");
         const data = await res.json();
         if (data) {
           setIntro(data.introduccion || "");
@@ -50,7 +50,7 @@ export default function TemplateConfig() {
     e.preventDefault();
     try {
       const response = await fetch(
-        "http://localhost:3000/actualizar-plantilla",
+        "https://backend-whatsapp-docker.onrender.com/actualizar-plantilla",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -71,7 +71,7 @@ export default function TemplateConfig() {
   // Función para el botón de envíos masivos directos
   const enviarMensajes = async () => {
     try {
-      const res = await fetch("http://localhost:3000/enviar-mensajes", {
+      const res = await fetch("https://backend-whatsapp-docker.onrender.com/enviar-mensajes", {
         method: "POST",
       });
       const data = await res.json();

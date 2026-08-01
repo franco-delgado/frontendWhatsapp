@@ -82,7 +82,7 @@ export const BandejaEntrada = () => {
   // Función para obtener los mensajes del backend
   const obtenerMensajes = async () => {
     try {
-      const response = await fetch('https://backend-whatsapp-docker.onrender.com');
+      const response = await fetch('https://backend-whatsapp-docker.onrender.com/api/mensajes');
       const data = await response.json();
       if (data.success) {
         const nuevosMensajes = data.data;
@@ -109,7 +109,7 @@ export const BandejaEntrada = () => {
   // Limpiar historial
   const limpiarMensajes = async () => {
     try {
-      const response = await fetch('https://backend-whatsapp-docker.onrender.com', {
+      const response = await fetch('https://backend-whatsapp-docker.onrender.com/api/mensajes', {
         method: 'DELETE',
       });
       const data = await response.json();

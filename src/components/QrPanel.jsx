@@ -10,7 +10,7 @@ export default function QrPanel() {
 
   const chequearEstado = async () => {
     try {
-      const res = await fetch("http://localhost:3000/status");
+      const res = await fetch("https://backend-whatsapp-docker.onrender.com/status");
       const data = await res.json();
 
       // Guardamos el estado del texto directo ("CONECTADO", "ESPERANDO_QR", "INICIALIZANDO")
@@ -34,7 +34,7 @@ export default function QrPanel() {
 
     try {
       // Primero actualizamos el estado general
-      const resStatus = await fetch("http://localhost:3000/status");
+      const resStatus = await fetch("https://backend-whatsapp-docker.onrender.com/status");
       const dataStatus = await resStatus.json();
       setEstado(dataStatus.estado);
 
@@ -53,7 +53,7 @@ export default function QrPanel() {
       }
 
       // Si efectivamente está esperando el QR, lo traemos
-      const res = await fetch("http://localhost:3000/qr-code");
+      const res = await fetch("https://backend-whatsapp-docker.onrender.com/qr-code");
       const data = await res.json();
 
       if (!data.qr) {
@@ -81,7 +81,7 @@ export default function QrPanel() {
 
     alert("Iniciando proceso de envío masivo. Seguilo en la consola.");
     try {
-      const res = await fetch("http://localhost:3000/enviar-mensajes", {
+      const res = await fetch("https://backend-whatsapp-docker.onrender.com/enviar-mensajes", {
         method: "POST",
       });
       const data = await res.json();

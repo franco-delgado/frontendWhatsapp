@@ -7,6 +7,8 @@ export const BandejaEntrada = () => {
   const [cargando, setCargando] = useState(true);
   const [mensajeSeleccionado, setMensajeSeleccionado] = useState(null);
 
+  const URL_BACKEND = 'https://backend-whatsapp-docker.onrender.com';
+
   // Estado para activar/desactivar la notificación sonora (persiste en localStorage)
   const [sonidoActivo, setSonidoActivo] = useState(() => {
     const guardado = localStorage.getItem("notificacion_sonora_activa");
@@ -79,10 +81,19 @@ export const BandejaEntrada = () => {
     }
   };
 
+  // Helper para construir la URL completa hacia la carpeta de archivos del backend
+  const construirUrlMedia = (ruta) => {
+    if (!ruta) return '';
+    if (ruta.startsWith('http://') || ruta.startsWith('https://')) {
+      return ruta;
+    }
+    return `${URL_BACKEND}${ruta.startsWith('/') ? '' : '/'}${ruta}`;
+  };
+
   // Función para obtener los mensajes del backend
   const obtenerMensajes = async () => {
     try {
-      const response = await fetch('https://backend-whatsapp-docker.onrender.com/api/mensajes');
+      const response = await fetch(`${URL_BACKEND}/api/mensajes`);
       const data = await response.json();
       if (data.success) {
         const nuevosMensajes = data.data;
@@ -109,7 +120,7 @@ export const BandejaEntrada = () => {
   // Limpiar historial
   const limpiarMensajes = async () => {
     try {
-      const response = await fetch('https://backend-whatsapp-docker.onrender.com/api/mensajes', {
+      const response = await fetch(`${URL_BACKEND}/api/mensajes`, {
         method: 'DELETE',
       });
       const data = await response.json();
@@ -131,7 +142,7 @@ export const BandejaEntrada = () => {
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [sonidoActivo]); // Re-suscribir cuando cambie el estado de sonido
+  }, [sonidoActivo]);
 
   return (
     <div className="inbox-container">
@@ -185,8 +196,27 @@ export const BandejaEntrada = () => {
                     {new Date(msg.timestamp).toLocaleTimeString()}
                   </small>
                 </div>
-                <div className="message-body">
-                  💬 {msg.text}
+
+                {/* DESPLIEGUE DINÁMICO SEGÚN TIPO DE MENSAJE (TEXTO, IMAGEN, AUDIO) */}
+                <div className="message-body" style={{ marginTop: '8px' }}>
+                  {msg.type === 'image' ? (
+                    <div className="media-preview" onClick={(e) => e.stopPropagation()}>
+                      <img 
+                        src={construirUrlMedia(msg.text)} 
+                        alt="Imagen de WhatsApp" 
+                        style={{ maxWidth: '100%', maxHeight: '250px', borderRadius: '8px', border: '1px solid #ddd' }}
+                      />
+                    </div>
+                  ) : msg.type === 'audio' ? (
+                    <div className="media-preview" onClick={(e) => e.stopPropagation()}>
+                      <audio controls style={{ width: '100%', maxWidth: '300px' }}>
+                        <source src={construirUrlMedia(msg.text)} type="audio/ogg" />
+                        Tu navegador no soporta el reproductor de audio.
+                      </audio>
+                    </div>
+                  ) : (
+                    <span>💬 {msg.text}</span>
+                  )}
                 </div>
               </div>
             );

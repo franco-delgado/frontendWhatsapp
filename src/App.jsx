@@ -19,7 +19,7 @@ function App() {
     <div className="container">
       <div className="app-container">
       <header style={{ display: 'flex', justifyContent: 'space-between', padding: '15px' }}>
-        <h1>Panel WhatsApp</h1>
+        <h1>Exclusivo Para cuenta</h1>
         {/* Renderiza el botón aquí */}
         <BotonInstalar />
       </header>
@@ -40,36 +40,10 @@ function App() {
       {/* Limpiamos el flotado del botón volver para que el título no se deskompagine */}
       <div style={{ clear: "both" }}></div>
 
-      <h1
-        className="title"
-        style={{ cursor: "pointer" }}
-        onClick={() => setSeccionActiva("inicio")}
-      >
-        Panel de Control WhatsApp
-      </h1>
-
       {/* SECCIÓN DEL QR (Se muestra siempre arriba en la home) */}
       {seccionActiva === "inicio" && (
         <div className="qr-section">
-         {/* <button
-            onClick={obtenerQR}
-            disabled={cargando}
-            className="button-primary"
-          >
-            {cargando ? "Conectando..." : "Obtener Código QR"}
-          </button>
-
-          <p className="status-text">
-            Estado del servidor: <span className="badge">{estado}</span>
-          </p>
-
-          <p className="msg-text">{qrMsg}</p>
-
-          {qrCode && (
-            <div className="qr-container">
-              <img src={qrCode} alt="Código QR WhatsApp" className="qr-image" />
-            </div>
-          )} */}
+         
         </div>
       )}
 

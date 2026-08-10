@@ -9,10 +9,11 @@ export default function Invitar() {
   });
 
   const [seleccionados, setSeleccionados] = useState([]);
-  
-  // Estados para las variables dinámicas de la plantilla
-  const [headerTexto, setHeaderTexto] = useState(""); // Variable {{1}} (Header / Título)
-  const [remitente, setRemitente] = useState("");     // Variable {{2}} (Cuerpo / Nombre de quien escribe)
+
+  // Estados adaptados a la plantilla de Meta
+  const [tituloVar, setTituloVar] = useState("");           // Corresponde a {{1}} del Título
+  const [textoAdicional, setTextoAdicional] = useState("");  // Se concatena al nombre para el {{1}} del Cuerpo
+  const [nombreNegocio, setNombreNegocio] = useState("");    // Corresponde al {{2}} del Cuerpo
 
   const { enviarMasivo, loading: cargando } = useEnviarWhatsApp();
 
@@ -32,45 +33,43 @@ export default function Invitar() {
     const listaAEnviar = contactos.filter((c) => seleccionados.includes(c.id));
 
     if (listaAEnviar.length === 0) {
-      alert("Por favor, selecciona al menos un contacto.");
+      alert("Por favor, selecciona al menos un contacto de la lista.");
       return;
     }
 
-    // Validamos que los textos no estén vacíos
-    const headerValido =
-      headerTexto && String(headerTexto).trim() !== ""
-        ? String(headerTexto).trim()
-        : "FARMANOR";
-
-    const remitenteValido =
-      remitente && String(remitente).trim() !== ""
-        ? String(remitente).trim()
-        : "un representante";
+    const valTitulo = tituloVar.trim() || "Aviso";
+    const valCuerpo2 = nombreNegocio.trim() || "Farmanor";
+    const textoBase = textoAdicional.trim();
 
     const contactsPayload = listaAEnviar.map((usuario) => {
       let numeroLimpio = usuario.numero.replace(/\D/g, "");
 
-      if (numeroLimpio.includes("3827402013")) {
-        numeroLimpio = "54382715402013";
+      if (!numeroLimpio.startsWith("54")) {
+        numeroLimpio = `54${numeroLimpio}`;
       }
+
+      const nombreCliente = usuario.nombre?.trim() || "Cliente";
+
+      // Variable 1 del body: nombre agendado + texto ingresado (ej: "Franco soy Franco...")
+      const valCuerpo1 = textoBase ? `${nombreCliente} ${textoBase}` : nombreCliente;
 
       return {
         number: numeroLimpio,
         type: "template",
-        templateName: "invitacion",
+        templateName: "alta",
         languageCode: "es_AR",
-        // [{{1}} = Header / Título, {{2}} = Remitente en el texto]
-        parameters: [headerValido, remitenteValido],
+        parameters: {
+          header: [valTitulo],            // {{1}} del header
+          body: [valCuerpo1, valCuerpo2]  // {{1}} y {{2}} del body
+        }
       };
     });
 
     try {
       const datos = await enviarMasivo(contactsPayload);
 
-      if (datos.success) {
-        alert(
-          `¡Invitaciones enviadas con éxito! Procesados: ${datos.processed} envíos. 🚀`
-        );
+      if (datos?.success) {
+        alert(`¡Mensajes enviados con éxito! Procesados: ${datos.processed} envíos. 🚀`);
         console.log("Detalle del resultado:", datos.results);
       }
     } catch (err) {
@@ -84,79 +83,80 @@ export default function Invitar() {
       <h2 className="invitar-title">📧 Enviar Invitaciones Masivas</h2>
 
       {/* Inputs para configurar las variables de la plantilla */}
-      <div className="inputs-variables-box" style={{ display: "flex", gap: "15px", marginBottom: "15px" }}>
-        
-        {/* Input Variable {{1}}: Header */}
-        <div style={{ flex: 1 }}>
+      <div style={{ display: "flex", gap: "10px", marginBottom: "15px", flexWrap: "wrap" }}>
+        <div style={{ flex: 1, minWidth: "200px" }}>
           <label
-            htmlFor="headerTexto"
-            style={{ display: "block", fontWeight: "bold", marginBottom: "5px" }}
+            htmlFor="tituloVar"
+            style={{ display: "block", fontWeight: "bold", marginBottom: "5px", fontSize: "13px" }}
           >
-            Título / Header (headerValido):
+            Título ({"{{1}}"}):
           </label>
           <input
-            id="headerTexto"
+            id="tituloVar"
             type="text"
-            placeholder="Ej: Novedades / FARMANOR"
-            value={headerTexto}
-            onChange={(e) => setHeaderTexto(e.target.value)}
-            style={{
-              width: "100%",
-              padding: "8px 12px",
-              borderRadius: "5px",
-              border: "1px solid #ccc",
-              fontSize: "14px",
-            }}
+            placeholder="ej: ¡Atención!"
+            value={tituloVar}
+            onChange={(e) => setTituloVar(e.target.value)}
+            style={{ width: "100%", padding: "8px", borderRadius: "5px", border: "1px solid #ccc", fontSize: "14px" }}
           />
         </div>
 
-        {/* Input Variable {{2}}: Remitente */}
-        <div style={{ flex: 1 }}>
+        <div style={{ flex: 1, minWidth: "200px" }}>
           <label
-            htmlFor="remitente"
-            style={{ display: "block", fontWeight: "bold", marginBottom: "5px" }}
+            htmlFor="textoAdicional"
+            style={{ display: "block", fontWeight: "bold", marginBottom: "5px", fontSize: "13px" }}
           >
-            Tu Nombre (headerTexto):
+            Mensaje adicional (se agrega al nombre, Cuerpo {"{{1}}"}):
           </label>
           <input
-            id="remitente"
+            id="textoAdicional"
             type="text"
-            placeholder="Ej: Juan Pérez"
-            value={remitente}
-            onChange={(e) => setRemitente(e.target.value)}
-            style={{
-              width: "100%",
-              padding: "8px 12px",
-              borderRadius: "5px",
-              border: "1px solid #ccc",
-              fontSize: "14px",
-            }}
+            placeholder="ej: soy Franco..."
+            value={textoAdicional}
+            onChange={(e) => setTextoAdicional(e.target.value)}
+            style={{ width: "100%", padding: "8px", borderRadius: "5px", border: "1px solid #ccc", fontSize: "14px" }}
           />
         </div>
 
+        <div style={{ flex: 1, minWidth: "200px" }}>
+          <label
+            htmlFor="nombreNegocio"
+            style={{ display: "block", fontWeight: "bold", marginBottom: "5px", fontSize: "13px" }}
+          >
+            Nombre Negocio/Local (Cuerpo {"{{2}}"}):
+          </label>
+          <input
+            id="nombreNegocio"
+            type="text"
+            placeholder="ej: Farmanor"
+            value={nombreNegocio}
+            onChange={(e) => setNombreNegocio(e.target.value)}
+            style={{ width: "100%", padding: "8px", borderRadius: "5px", border: "1px solid #ccc", fontSize: "14px" }}
+          />
+        </div>
       </div>
 
-      {/* Vista Previa de la plantilla */}
+      {/* Vista previa de la Plantilla ajustada a Meta */}
       <div className="preview-box">
-        <p style={{ margin: "0 0 8px 0", fontSize: "12px", color: "#666" }}>
+        <p style={{ margin: "0 0 5px 0", fontSize: "12px", color: "#666" }}>
           <strong>Vista previa de la Plantilla:</strong>
         </p>
 
-        {/* Título en grande simulando la cabecera de Meta */}
-        <h4 style={{ margin: "0 0 10px 0", color: "#007bff", fontSize: "16px" }}>
-          {headerTexto.trim() || "[Texto del Título / Header]"}
+        <h4 style={{ margin: "0 0 8px 0", color: "#007bff", fontStyle: "italic" }}>
+          {tituloVar.trim() || "{{1}}"}
         </h4>
 
-        <p style={{ margin: 0, lineHeight: "1.5" }}>
-          "Saludos mi nombre es{" "}
+        <p style={{ margin: 0, fontSize: "13px", lineHeight: "1.4", color: "#444" }}>
+          Hola{" "}
           <strong style={{ color: "#28a745" }}>
-            {remitente.trim() || "[Tu Nombre]"}
+            {"{Nombre}"}{textoAdicional.trim() ? ` ${textoAdicional.trim()}` : ""}
           </strong>
-          . Te escribo para contarte que en FARMANOR podes acceder a tu cuenta
-          corriente solo con tu DNI, foto de algun servicio y recibo de sueldo.
-          Con tu cuenta corriente podes comprar en cualquiera de nuestras 16
-          sucursales, ademas tenes importantes descuento de hasta el 40% en
-          medicamentos de nuestro vademecum."
+          , te comento que ya podés gestionar tu cuenta corriente en{" "}
+          <strong style={{ color: "#28a745" }}>{nombreNegocio.trim() || "{{2}}"}</strong> presentando tu DNI, un
+          comprobante de servicio y tu recibo de sueldo. Cualquier consulta, escribime
+        </p>
+        <p style={{ margin: "6px 0 0 0", fontSize: "11px", color: "#999" }}>
+          * "{"{Nombre}"}" se reemplaza automáticamente por el nombre agendado de cada contacto.
         </p>
       </div>
 
@@ -164,13 +164,12 @@ export default function Invitar() {
         onClick={enviarInvitaciones}
         disabled={cargando}
         className="btn-enviar-cobros"
+        style={{ width: "100%", marginTop: "15px" }}
       >
-        {cargando
-          ? "Enviando invitaciones..."
-          : `Enviar Recordatorios (${seleccionados.length})`}
+        {cargando ? "Enviando..." : `Enviar Invitaciones (${seleccionados.length})`}
       </button>
 
-      <div className="usuarios-section">
+      <div className="usuarios-section" style={{ marginTop: "20px" }}>
         <h3>Contactos Disponibles</h3>
         <div className="usuarios-lista">
           {contactos.map((usuario) => (
@@ -182,16 +181,18 @@ export default function Invitar() {
               />
               <div className="usuario-info">
                 <strong>{usuario.nombre}</strong> ({usuario.numero})
-                <span
-                  className="deuda-tag"
-                  style={{
-                    marginLeft: "10px",
-                    fontWeight: "bold",
-                    color: usuario.monto > 0 ? "#d9534f" : "#5cb85c",
-                  }}
-                >
-                  Deuda: ${usuario.monto}
-                </span>
+                {usuario.monto > 0 && (
+                  <span
+                    style={{
+                      color: "#d9534f",
+                      fontSize: "12px",
+                      marginLeft: "8px",
+                      fontWeight: "bold"
+                    }}
+                  >
+                    Deuda: ${usuario.monto}
+                  </span>
+                )}
               </div>
             </div>
           ))}
@@ -205,7 +206,7 @@ export default function Invitar() {
                 margin: "10px 0",
               }}
             >
-              No hay contactos guardados en el sistema.
+              No hay contactos guardados.
             </p>
           )}
         </div>

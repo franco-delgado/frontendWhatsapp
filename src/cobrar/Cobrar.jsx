@@ -36,16 +36,13 @@ export default function Cobrar() {
     }
 
     const contactsPayload = listaAEnviar.map((usuario) => {
-      let numeroLimpio = usuario.numero.replace(/\D/g, "");
-
-      if (numeroLimpio.includes("3827402013")) {
-        numeroLimpio = "54382715402013";
-      }
+      // Limpieza directa de caracteres no numéricos
+      const numeroLimpio = usuario.numero.replace(/\D/g, "");
 
       const nombreCliente = usuario.nombre?.trim() || "Cliente";
       const textoBase = textoPersonalizado.trim();
 
-      // Si hay texto personalizado, lo une al nombre (ej: "Estimado Juan"); de lo contrario solo usa el nombre
+      // Si hay texto personalizado, lo une al nombre (ej: "Juan Estimado"); de lo contrario solo usa el nombre
       const variable1 = textoBase ? `${nombreCliente} ${textoBase}` : nombreCliente;
 
       return {

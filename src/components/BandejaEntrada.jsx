@@ -7,6 +7,7 @@ export const BandejaEntrada = () => {
   const [cargando, setCargando] = useState(true);
   const [mensajeSeleccionado, setMensajeSeleccionado] = useState(null);
 
+  // URL del servidor Express conectado a MongoDB
   const URL_BACKEND = 'https://backend-whatsapp-docker.onrender.com';
 
   // Estado para activar/desactivar la notificación sonora (persiste en localStorage)
@@ -61,28 +62,29 @@ export const BandejaEntrada = () => {
     }
   };
 
-  // Función auxiliar para obtener el nombre agendado
+  // Función auxiliar para obtener el nombre agendado desde localStorage
   const obtenerNombreAgendado = (msg) => {
     try {
       const contactosGuardados = JSON.parse(localStorage.getItem("contactos_whatsapp")) || [];
       const numeroLimpio = String(msg.from || "").replace(/\D/g, "");
 
-      if (!numeroLimpio) return msg.nombre;
+      if (!numeroLimpio) return msg.nombre || msg.from;
 
       const contactoEncontrado = contactosGuardados.find((c) => {
         const telContacto = String(c.numero).replace(/\D/g, "");
         return numeroLimpio.endsWith(telContacto) || telContacto.endsWith(numeroLimpio);
       });
 
-      return contactoEncontrado ? contactoEncontrado.nombre : msg.nombre;
+      return contactoEncontrado ? contactoEncontrado.nombre : (msg.nombre || msg.from);
     } catch (error) {
       console.error("Error al leer contactos de localStorage:", error);
-      return msg.nombre;
+      return msg.nombre || msg.from;
     }
   };
 
-  // Helper para construir la URL completa hacia la carpeta de archivos del backend
-  const construirUrlMedia = (ruta) => {
+  // Helper para construir la URL completa hacia la carpeta de archivos multimedia
+  const construirUrlMedia = (msg) => {
+    const ruta = msg.mediaUrl || msg.text || '';
     if (!ruta) return '';
     if (ruta.startsWith('http://') || ruta.startsWith('https://')) {
       return ruta;
@@ -90,47 +92,58 @@ export const BandejaEntrada = () => {
     return `${URL_BACKEND}${ruta.startsWith('/') ? '' : '/'}${ruta}`;
   };
 
-  // Función para obtener los mensajes del backend
+  // Función para obtener los mensajes guardados en MongoDB desde el backend
   const obtenerMensajes = async () => {
     try {
       const response = await fetch(`${URL_BACKEND}/api/mensajes`);
       const data = await response.json();
-      if (data.success) {
-        const nuevosMensajes = data.data;
 
-        // Reproduce sonido SOLO si el sonido está activado y hay nuevos mensajes
-        if (
-          sonidoActivo &&
-          nuevosMensajes.length > prevMensajesCountRef.current &&
-          prevMensajesCountRef.current !== 0
-        ) {
-          reproducirSonidoNotificacion();
-        }
-
-        prevMensajesCountRef.current = nuevosMensajes.length;
-        setMensajes(nuevosMensajes);
+      // Compatibilidad con respuestas de objeto ({ success: true, data: [...] }) o array directo ([...])
+      let nuevosMensajes = [];
+      if (Array.isArray(data)) {
+        nuevosMensajes = data;
+      } else if (data.success && Array.isArray(data.data)) {
+        nuevosMensajes = data.data;
+      } else if (data.mensajes && Array.isArray(data.mensajes)) {
+        nuevosMensajes = data.mensajes;
       }
+
+      // Reproduce sonido SOLO si está activado y llegaron mensajes nuevos
+      if (
+        sonidoActivo &&
+        nuevosMensajes.length > prevMensajesCountRef.current &&
+        prevMensajesCountRef.current !== 0
+      ) {
+        reproducirSonidoNotificacion();
+      }
+
+      prevMensajesCountRef.current = nuevosMensajes.length;
+      setMensajes(nuevosMensajes);
     } catch (error) {
-      console.error('Error al obtener mensajes:', error);
+      console.error('Error al obtener mensajes de MongoDB:', error);
     } finally {
       setCargando(false);
     }
   };
 
-  // Limpiar historial
+  // Limpiar historial de la base de datos
   const limpiarMensajes = async () => {
+    if (!window.confirm("¿Estás seguro de que deseas borrar todo el historial de mensajes en MongoDB?")) {
+      return;
+    }
+
     try {
       const response = await fetch(`${URL_BACKEND}/api/mensajes`, {
         method: 'DELETE',
       });
       const data = await response.json();
-      if (data.success) {
+      if (data.success || response.ok) {
         setMensajes([]);
         setMensajeSeleccionado(null);
         prevMensajesCountRef.current = 0;
       }
     } catch (error) {
-      console.error('Error al limpiar historial:', error);
+      console.error('Error al limpiar historial de la base de datos:', error);
     }
   };
 
@@ -174,18 +187,19 @@ export const BandejaEntrada = () => {
       </div>
 
       {cargando ? (
-        <p>Cargando mensajes...</p>
+        <p>Cargando mensajes desde MongoDB...</p>
       ) : mensajes.length === 0 ? (
         <p className="empty-message">No hay mensajes recibidos aún.</p>
       ) : (
         <div className="messages-list">
           {mensajes.map((msg) => {
-            const isSelected = mensajeSeleccionado?.id === msg.id;
+            const idMensaje = msg._id || msg.id;
+            const isSelected = mensajeSeleccionado && (mensajeSeleccionado._id === idMensaje || mensajeSeleccionado.id === idMensaje);
             const nombreMostrar = obtenerNombreAgendado(msg);
 
             return (
               <div
-                key={msg.id}
+                key={idMensaje}
                 className={`message-card ${isSelected ? 'selected' : ''}`}
                 onClick={() => setMensajeSeleccionado(msg)}
                 style={{ cursor: 'pointer' }}
@@ -193,7 +207,7 @@ export const BandejaEntrada = () => {
                 <div className="message-header">
                   <strong>👤 {nombreMostrar} ({msg.from})</strong>
                   <small className="message-time">
-                    {new Date(msg.timestamp).toLocaleTimeString()}
+                    {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString() : ''}
                   </small>
                 </div>
 
@@ -202,7 +216,7 @@ export const BandejaEntrada = () => {
                   {msg.type === 'image' ? (
                     <div className="media-preview" onClick={(e) => e.stopPropagation()}>
                       <img 
-                        src={construirUrlMedia(msg.text)} 
+                        src={construirUrlMedia(msg)} 
                         alt="Imagen de WhatsApp" 
                         style={{ maxWidth: '100%', maxHeight: '250px', borderRadius: '8px', border: '1px solid #ddd' }}
                       />
@@ -210,7 +224,7 @@ export const BandejaEntrada = () => {
                   ) : msg.type === 'audio' ? (
                     <div className="media-preview" onClick={(e) => e.stopPropagation()}>
                       <audio controls style={{ width: '100%', maxWidth: '300px' }}>
-                        <source src={construirUrlMedia(msg.text)} type="audio/ogg" />
+                        <source src={construirUrlMedia(msg)} type="audio/ogg" />
                         Tu navegador no soporta el reproductor de audio.
                       </audio>
                     </div>

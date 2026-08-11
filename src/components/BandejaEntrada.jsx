@@ -98,7 +98,6 @@ export const BandejaEntrada = () => {
       const response = await fetch(`${URL_BACKEND}/api/mensajes`);
       const data = await response.json();
 
-      // Compatibilidad con respuestas de objeto ({ success: true, data: [...] }) o array directo ([...])
       let nuevosMensajes = [];
       if (Array.isArray(data)) {
         nuevosMensajes = data;
@@ -108,7 +107,6 @@ export const BandejaEntrada = () => {
         nuevosMensajes = data.mensajes;
       }
 
-      // Reproduce sonido SOLO si está activado y llegaron mensajes nuevos
       if (
         sonidoActivo &&
         nuevosMensajes.length > prevMensajesCountRef.current &&
@@ -126,7 +124,52 @@ export const BandejaEntrada = () => {
     }
   };
 
-  // Limpiar historial de la base de datos
+  // Eliminar un solo mensaje por ID
+const eliminarMensajeIndividual = async (e, idMensaje) => {
+  e.stopPropagation(); // Evita que se seleccione el mensaje al hacer clic en borrar
+
+  if (!idMensaje) {
+    alert("Error: No se encontró un ID válido para este mensaje.");
+    return;
+  }
+
+  if (!window.confirm("¿Deseas eliminar este mensaje?")) {
+    return;
+  }
+
+  try {
+    const response = await fetch(`${URL_BACKEND}/api/mensajes/${idMensaje}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+
+    // Validar si la respuesta no es 200/201 antes de intentar response.json()
+    if (!response.ok) {
+      const errorTexto = await response.text();
+      console.error(`[DELETE Error ${response.status}]:`, errorTexto);
+      alert(`No se pudo eliminar el mensaje (Código: ${response.status}). Revisa la consola.`);
+      return;
+    }
+
+    const data = await response.json();
+
+    if (data.success) {
+      setMensajes((prev) => prev.filter((m) => (m._id || m.id) !== idMensaje));
+      if (mensajeSeleccionado && (mensajeSeleccionado._id === idMensaje || mensajeSeleccionado.id === idMensaje)) {
+        setMensajeSeleccionado(null);
+      }
+    } else {
+      alert(`Error: ${data.error || 'No se pudo eliminar el mensaje'}`);
+    }
+  } catch (error) {
+    console.error('Error de red al eliminar el mensaje:', error);
+    alert('Ocurrió un error al intentar eliminar el mensaje.');
+  }
+};
+
+  // Limpiar todo el historial de la base de datos
   const limpiarMensajes = async () => {
     if (!window.confirm("¿Estás seguro de que deseas borrar todo el historial de mensajes en MongoDB?")) {
       return;
@@ -163,7 +206,6 @@ export const BandejaEntrada = () => {
         <h2>📩 Bandeja de Entrada Meta API</h2>
         
         <div style={{ display: 'flex', gap: '10px' }}>
-          {/* Botón de toggle para activar/desactivar sonido */}
           <button
             onClick={() => setSonidoActivo(!sonidoActivo)}
             style={{
@@ -181,7 +223,7 @@ export const BandejaEntrada = () => {
           </button>
 
           <button onClick={limpiarMensajes} className="btn-vaciar">
-            Vaciar
+            Vaciar Todo
           </button>
         </div>
       </div>
@@ -202,16 +244,37 @@ export const BandejaEntrada = () => {
                 key={idMensaje}
                 className={`message-card ${isSelected ? 'selected' : ''}`}
                 onClick={() => setMensajeSeleccionado(msg)}
-                style={{ cursor: 'pointer' }}
+                style={{ cursor: 'pointer', position: 'relative' }}
               >
-                <div className="message-header">
-                  <strong>👤 {nombreMostrar} ({msg.from})</strong>
-                  <small className="message-time">
-                    {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString() : ''}
-                  </small>
+                <div className="message-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>
+                    <strong>👤 {nombreMostrar} ({msg.from})</strong>
+                  </span>
+                  
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <small className="message-time">
+                      {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString() : ''}
+                    </small>
+                    
+                    {/* Botón para borrar un mensaje individual */}
+                    <button
+                      onClick={(e) => eliminarMensajeIndividual(e, idMensaje)}
+                      title="Eliminar mensaje"
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        color: '#dc3545',
+                        padding: '2px 5px'
+                      }}
+                    >
+                      🗑️
+                    </button>
+                  </div>
                 </div>
 
-                {/* DESPLIEGUE DINÁMICO SEGÚN TIPO DE MENSAJE (TEXTO, IMAGEN, AUDIO) */}
+                {/* DESPLIEGUE DINÁMICO SEGÚN TIPO DE MENSAJE */}
                 <div className="message-body" style={{ marginTop: '8px' }}>
                   {msg.type === 'image' ? (
                     <div className="media-preview" onClick={(e) => e.stopPropagation()}>

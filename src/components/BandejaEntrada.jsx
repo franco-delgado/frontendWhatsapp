@@ -14,6 +14,7 @@ export const BandejaEntrada = () => {
 
   // URL del servidor Express conectado a MongoDB
   const URL_BACKEND = 'https://backend-whatsapp-docker.onrender.com';
+  
 
   // Estado para activar/desactivar la notificación sonora (persiste en localStorage)
   const [sonidoActivo, setSonidoActivo] = useState(() => {
@@ -100,37 +101,64 @@ export const BandejaEntrada = () => {
     return `${URL_BACKEND}${ruta.startsWith('/') ? '' : '/'}${ruta}`;
   };
 
-  // Función para obtener los mensajes guardados en MongoDB desde el backend
-  const obtenerMensajes = async () => {
-    try {
-      const response = await fetch(`${URL_BACKEND}/api/mensajes`);
-      const data = await response.json();
+  // Función para obtener los mensajes guardados en el backend y normalizarlos
+const obtenerMensajes = async () => {
+  try {
+    const response = await fetch(`${URL_BACKEND}/api/mensajes`);
+    const data = await response.json();
 
-      let nuevosMensajes = [];
-      if (Array.isArray(data)) {
-        nuevosMensajes = data;
-      } else if (data.success && Array.isArray(data.data)) {
-        nuevosMensajes = data.data;
-      } else if (data.mensajes && Array.isArray(data.mensajes)) {
-        nuevosMensajes = data.mensajes;
-      }
-
-      if (
-        sonidoActivo &&
-        nuevosMensajes.length > prevMensajesCountRef.current &&
-        prevMensajesCountRef.current !== 0
-      ) {
-        reproducirSonidoNotificacion();
-      }
-
-      prevMensajesCountRef.current = nuevosMensajes.length;
-      setMensajes(nuevosMensajes);
-    } catch (error) {
-      console.error('Error al obtener mensajes de MongoDB:', error);
-    } finally {
-      setCargando(false);
+    let nuevosMensajes = [];
+    if (Array.isArray(data)) {
+      nuevosMensajes = data;
+    } else if (data.success && Array.isArray(data.data)) {
+      nuevosMensajes = data.data;
+    } else if (data.mensajes && Array.isArray(data.mensajes)) {
+      nuevosMensajes = data.mensajes;
     }
-  };
+
+    // Normalizamos la estructura para que coincida con lo que el componente espera
+    const mensajesMapeados = nuevosMensajes.map((m) => {
+      // Determinar si es una imagen o audio según el tipo mime o extensión
+      let tipoCalculado = 'text';
+      const mime = m.tipo_mime || m.mime_type || '';
+      if (mime.includes('image')) {
+        tipoCalculado = 'image';
+      } else if (mime.includes('audio')) {
+        tipoCalculado = 'audio';
+      }
+
+      return {
+        _id: m.id || m._id,
+        id: m.id || m._id,
+        // Usamos remitente o sender o from
+        from: m.from || m.remitente || m.sender || 'Desconocido',
+        // Usamos text o cuerpo o body
+        text: m.text || m.cuerpo || m.body || '',
+        // Usamos timestamp o created_at
+        timestamp: m.timestamp || m.created_at,
+        // Usamos mediaUrl o URL_de_medios o media_url
+        mediaUrl: m.mediaUrl || m.URL_de_medios || m.media_url || '',
+        type: m.type || tipoCalculado,
+        nombre: m.nombre || m.from || m.remitente || m.sender
+      };
+    });
+
+    if (
+      sonidoActivo &&
+      mensajesMapeados.length > prevMensajesCountRef.current &&
+      prevMensajesCountRef.current !== 0
+    ) {
+      reproducirSonidoNotificacion();
+    }
+
+    prevMensajesCountRef.current = mensajesMapeados.length;
+    setMensajes(mensajesMapeados);
+  } catch (error) {
+    console.error('Error al obtener mensajes:', error);
+  } finally {
+    setCargando(false);
+  }
+};
 
   // Eliminar un solo mensaje por ID
   const eliminarMensajeIndividual = async (e, idMensaje) => {

@@ -15,7 +15,6 @@ export const BandejaEntrada = () => {
   // URL del servidor Express conectado a MongoDB
   const URL_BACKEND = 'https://backend-whatsapp-docker.onrender.com';
   
-
   // Estado para activar/desactivar la notificación sonora (persiste en localStorage)
   const [sonidoActivo, setSonidoActivo] = useState(() => {
     const guardado = localStorage.getItem("notificacion_sonora_activa");
@@ -25,8 +24,8 @@ export const BandejaEntrada = () => {
   // Referencia para guardar la cantidad de mensajes de la consulta anterior
   const prevMensajesCountRef = useRef(0);
 
-  // Referencia al final de la conversación, para hacer scroll automático
-  const finConversacionRef = useRef(null);
+  // Referencia al contenedor de mensajes para controlar el scroll interno sin desplazar el viewport
+  const contenedorMensajesRef = useRef(null);
 
   // Guardar preferencia de sonido en localStorage al cambiar
   useEffect(() => {
@@ -102,67 +101,69 @@ export const BandejaEntrada = () => {
   };
 
   // Función para obtener los mensajes guardados en el backend y normalizarlos
-const obtenerMensajes = async () => {
-  try {
-    const response = await fetch(`${URL_BACKEND}/api/mensajes`);
-    const data = await response.json();
+  const obtenerMensajes = async () => {
+    try {
+      const response = await fetch(`${URL_BACKEND}/api/mensajes`);
+      const data = await response.json();
 
-    let nuevosMensajes = [];
-    if (Array.isArray(data)) {
-      nuevosMensajes = data;
-    } else if (data.success && Array.isArray(data.data)) {
-      nuevosMensajes = data.data;
-    } else if (data.mensajes && Array.isArray(data.mensajes)) {
-      nuevosMensajes = data.mensajes;
-    }
-
-    // Normalizamos la estructura para que coincida con lo que el componente espera
-    const mensajesMapeados = nuevosMensajes.map((m) => {
-      // Determinar si es una imagen o audio según el tipo mime o extensión
-      let tipoCalculado = 'text';
-      const mime = m.tipo_mime || m.mime_type || '';
-      if (mime.includes('image')) {
-        tipoCalculado = 'image';
-      } else if (mime.includes('audio')) {
-        tipoCalculado = 'audio';
+      let nuevosMensajes = [];
+      if (Array.isArray(data)) {
+        nuevosMensajes = data;
+      } else if (data.success && Array.isArray(data.data)) {
+        nuevosMensajes = data.data;
+      } else if (data.mensajes && Array.isArray(data.mensajes)) {
+        nuevosMensajes = data.mensajes;
       }
 
-      return {
-        _id: m.id || m._id,
-        id: m.id || m._id,
-        // Usamos remitente o sender o from
-        from: m.from || m.remitente || m.sender || 'Desconocido',
-        // Usamos text o cuerpo o body
-        text: m.text || m.cuerpo || m.body || '',
-        // Usamos timestamp o created_at
-        timestamp: m.timestamp || m.created_at,
-        // Usamos mediaUrl o URL_de_medios o media_url
-        mediaUrl: m.mediaUrl || m.URL_de_medios || m.media_url || '',
-        type: m.type || tipoCalculado,
-        nombre: m.nombre || m.from || m.remitente || m.sender
-      };
-    });
+      // Normalizamos la estructura para que coincida con lo que el componente espera
+      const mensajesMapeados = nuevosMensajes.map((m) => {
+        let tipoCalculado = 'text';
+        const mime = m.tipo_mime || m.mime_type || '';
+        if (mime.includes('image')) {
+          tipoCalculado = 'image';
+        } else if (mime.includes('audio')) {
+          tipoCalculado = 'audio';
+        }
 
-    if (
-      sonidoActivo &&
-      mensajesMapeados.length > prevMensajesCountRef.current &&
-      prevMensajesCountRef.current !== 0
-    ) {
-      reproducirSonidoNotificacion();
+        return {
+          _id: m.id || m._id,
+          id: m.id || m._id,
+          from: m.from || m.remitente || m.sender || 'Desconocido',
+          text: m.text || m.cuerpo || m.body || '',
+          timestamp: m.timestamp || m.created_at,
+          mediaUrl: m.mediaUrl || m.URL_de_medios || m.media_url || '',
+          type: m.type || tipoCalculado,
+          nombre: m.nombre || m.from || m.remitente || m.sender
+        };
+      });
+
+      if (
+        sonidoActivo &&
+        mensajesMapeados.length > prevMensajesCountRef.current &&
+        prevMensajesCountRef.current !== 0
+      ) {
+        reproducirSonidoNotificacion();
+      }
+
+      prevMensajesCountRef.current = mensajesMapeados.length;
+
+      // Se evita actualizar el estado si los datos no cambiaron (evita re-renders y scroll saltones)
+      setMensajes((prev) => {
+        if (JSON.stringify(prev) === JSON.stringify(mensajesMapeados)) {
+          return prev;
+        }
+        return mensajesMapeados;
+      });
+    } catch (error) {
+      console.error('Error al obtener mensajes:', error);
+    } finally {
+      setCargando(false);
     }
-
-    prevMensajesCountRef.current = mensajesMapeados.length;
-    setMensajes(mensajesMapeados);
-  } catch (error) {
-    console.error('Error al obtener mensajes:', error);
-  } finally {
-    setCargando(false);
-  }
-};
+  };
 
   // Eliminar un solo mensaje por ID
   const eliminarMensajeIndividual = async (e, idMensaje) => {
-    e.stopPropagation(); // Evita que se seleccione el mensaje al hacer clic en borrar
+    e.stopPropagation();
 
     if (!idMensaje) {
       alert("Error: No se encontró un ID válido para este mensaje.");
@@ -181,7 +182,6 @@ const obtenerMensajes = async () => {
         }
       });
 
-      // Validar si la respuesta no es 200/201 antes de intentar response.json()
       if (!response.ok) {
         const errorTexto = await response.text();
         console.error(`[DELETE Error ${response.status}]:`, errorTexto);
@@ -253,27 +253,25 @@ const obtenerMensajes = async () => {
   };
 
   useEffect(() => {
+  obtenerMensajes();
+
+  // Si hay un mensaje seleccionado (modal abierto), no ejecutar el polling
+  if (mensajeSeleccionado) return;
+
+  const interval = setInterval(() => {
     obtenerMensajes();
+  }, 8000);
 
-    const interval = setInterval(() => {
-      obtenerMensajes();
-    }, 3000);
+  return () => clearInterval(interval);
+}, [sonidoActivo, mensajeSeleccionado]);
 
-    return () => clearInterval(interval);
-  }, [sonidoActivo]);
-
-  // Hace scroll hasta el final cada vez que cambian los mensajes de la conversación abierta
+  // Scroll interno directo sobre el contenedor sin mover la página completa
   useEffect(() => {
-    if (contactoActivo && finConversacionRef.current) {
-      finConversacionRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    if (contactoActivo && contenedorMensajesRef.current) {
+      contenedorMensajesRef.current.scrollTop = contenedorMensajesRef.current.scrollHeight;
     }
   }, [contactoActivo, mensajes]);
 
-  // ---------------------------------------------------------------------
-  // Agrupa todos los mensajes por número de contacto (from), quedándose
-  // con el último mensaje de cada uno para mostrar en la lista, ordenados
-  // del más reciente al más antiguo.
-  // ---------------------------------------------------------------------
   const obtenerContactos = () => {
     const mapa = new Map();
 
@@ -304,7 +302,6 @@ const obtenerMensajes = async () => {
     });
   };
 
-  // Texto corto para la vista previa del último mensaje en la lista de contactos
   const obtenerPreviaMensaje = (msg) => {
     if (msg.type === 'image') return '📷 Imagen';
     if (msg.type === 'audio') return '🎵 Audio';
@@ -313,7 +310,6 @@ const obtenerMensajes = async () => {
 
   const contactos = obtenerContactos();
 
-  // Mensajes de la conversación abierta, ordenados del más antiguo al más nuevo
   const mensajesConversacion = contactoActivo
     ? mensajes
         .filter((m) => m.from === contactoActivo)
@@ -361,7 +357,6 @@ const obtenerMensajes = async () => {
       ) : contactos.length === 0 ? (
         <p className="empty-message">No hay mensajes recibidos aún.</p>
       ) : contactoActivo === null ? (
-        // ------------------------- LISTA DE CONTACTOS -------------------------
         <div className="contacts-list">
           {contactos.map((c) => {
             const nombreMostrar = obtenerNombreAgendado(c.ultimoMensaje);
@@ -418,7 +413,6 @@ const obtenerMensajes = async () => {
           })}
         </div>
       ) : (
-        // ------------------------- CONVERSACIÓN ABIERTA -------------------------
         <div className="conversation-view">
           <div
             className="conversation-header"
@@ -460,6 +454,7 @@ const obtenerMensajes = async () => {
           </div>
 
           <div
+            ref={contenedorMensajesRef}
             className="conversation-messages"
             style={{
               display: 'flex',
@@ -525,7 +520,6 @@ const obtenerMensajes = async () => {
                 </div>
               );
             })}
-            <div ref={finConversacionRef} />
           </div>
         </div>
       )}

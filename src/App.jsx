@@ -1,7 +1,6 @@
 // src/App.jsx
 import { useState } from "react";
-import { useObtenerQR } from "./hooks/useObtenerQR";
-import Invitar from "./invitar/Invitar.jsx"; // Ajustado a tu estructura de carpetas
+import Invitar from "./invitar/Invitar.jsx";
 import Contactos from "./contactos/Contactos.jsx";
 import Cobrar from "./cobrar/Cobrar";
 import { BandejaEntrada } from './components/BandejaEntrada';
@@ -9,8 +8,6 @@ import "./App.css";
 import { BotonInstalar } from './components/BotonInstalar.jsx';
 
 function App() {
-  const { obtenerQR, cargando, estado, qrCode, qrMsg } = useObtenerQR();
-
   // Estado para controlar qué sección está activa en pantalla
   // Valores posibles: "inicio", "cobrar", "invitar", "contactos"
   const [seccionActiva, setSeccionActiva] = useState("inicio");
@@ -18,34 +15,27 @@ function App() {
   return (
     <div className="container">
       <div className="app-container">
-      <header style={{ display: 'flex', justifyContent: 'space-between', padding: '15px' }}>
-        <h1>Exclusivo Para cuenta</h1>
-        {/* Renderiza el botón aquí */}
-        <BotonInstalar />
-      </header>
-      
-      {/* Resto de tus módulos (BandejaEntrada, Cobrar, Contactos, etc.) */}
-    </div>
+        <header style={{ display: 'flex', justifyContent: 'space-between', padding: '15px' }}>
+          <h1>Exclusivo Para cuenta</h1>
+          {/* Renderiza el botón aquí */}
+          <BotonInstalar />
+        </header>
+
+        {/* Resto de tus módulos (BandejaEntrada, Cobrar, Contactos, etc.) */}
+      </div>
+
       {/* BOTÓN VOLVER ATRÁS (Solo se muestra si NO estás en el inicio) */}
       {seccionActiva !== "inicio" && (
         <button
           className="button-action-volver"
-          
           onClick={() => setSeccionActiva("inicio")}
         >
           ⬅️ Volver
         </button>
       )}
 
-      {/* Limpiamos el flotado del botón volver para que el título no se deskompagine */}
+      {/* Limpiamos el flotado del botón volver para que el título no se descompagine */}
       <div style={{ clear: "both" }}></div>
-
-      {/* SECCIÓN DEL QR (Se muestra siempre arriba en la home) */}
-      {seccionActiva === "inicio" && (
-        <div className="qr-section">
-         
-        </div>
-      )}
 
       {/* RENDERIZADO CONDICIONAL DE SECCIONES */}
       {seccionActiva === "cobrar" && (

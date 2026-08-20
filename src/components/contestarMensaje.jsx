@@ -1,10 +1,24 @@
-import React, { useState } from 'react';
-import './bandejaEntrada.css'; // Comparte los estilos o añade los tuyos
+import React, { useState, useEffect, useRef } from 'react';
+import './bandejaEntrada.css';
 
 export const ContestarMensaje = ({ mensajeSeleccionado, alCerrar, alEnviarExitoso }) => {
   const [textoRespuesta, setTextoRespuesta] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState(null);
+
+  const textareaRef = useRef(null);
+
+  useEffect(() => {
+    if (mensajeSeleccionado && textareaRef.current) {
+      textareaRef.current.focus({ preventScroll: true });
+    }
+  }, [mensajeSeleccionado]);
+
+  useEffect(() => {
+    document.body.classList.add('modal-abierto');
+    return () => document.body.classList.remove('modal-abierto');
+  }, []);
+
 
   const manejarEnvio = async (e) => {
     e.preventDefault();
@@ -14,16 +28,15 @@ export const ContestarMensaje = ({ mensajeSeleccionado, alCerrar, alEnviarExitos
     setError(null);
 
     try {
-      // Ajusta la URL del endpoint según la ruta de tu backend
       const response = await fetch('https://backend-whatsapp-docker.onrender.com/api/mensajes/responder', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          to: mensajeSeleccionado.from,              // Número del destinatario
-          messageText: textoRespuesta,               // Contenido del mensaje libre
-          contextMessageId: mensajeSeleccionado.wamid || mensajeSeleccionado.id // ID para citar/responder
+          to: mensajeSeleccionado.from,
+          messageText: textoRespuesta,
+          contextMessageId: mensajeSeleccionado.wamid || mensajeSeleccionado.id
         }),
       });
 
@@ -46,41 +59,45 @@ export const ContestarMensaje = ({ mensajeSeleccionado, alCerrar, alEnviarExitos
   if (!mensajeSeleccionado) return null;
 
   return (
-    <div className="reply-container">
-      <div className="reply-header">
-        <h4>
-          Reponder a: <strong>{mensajeSeleccionado.nombre || mensajeSeleccionado.from}</strong>
-        </h4>
-        <button type="button" onClick={alCerrar} className="btn-cerrar">
-          ✕
-        </button>
-      </div>
-
-      <div className="reply-original-preview">
-        <small>Mensaje original:</small>
-        <p>"{mensajeSeleccionado.text}"</p>
-      </div>
-
-      <form onSubmit={manejarEnvio} className="reply-form">
-        <textarea
-          value={textoRespuesta}
-          onChange={(e) => setTextoRespuesta(e.target.value)}
-          placeholder="Escribe tu respuesta libre..."
-          rows="3"
-          disabled={enviando}
-        />
-
-        {error && <p className="error-text">{error}</p>}
-
-        <div className="reply-actions">
-          <button type="button" onClick={alCerrar} className="btn-cancelar" disabled={enviando}>
-            Cancelar
-          </button>
-          <button type="submit" className="btn-enviar" disabled={enviando || !textoRespuesta.trim()}>
-            {enviando ? 'Enviando...' : 'Enviar Respuesta'}
+    <div className="reply-overlay" onClick={alCerrar}>
+      {/* e.stopPropagation() evita que al hacer clic dentro de la caja se cierre la ventana */}
+      <div className="reply-container" onClick={(e) => e.stopPropagation()}>
+        <div className="reply-header">
+          <h4>
+            Responder a: <strong>{mensajeSeleccionado.nombre || mensajeSeleccionado.from}</strong>
+          </h4>
+          <button type="button" onClick={alCerrar} className="btn-cerrar">
+            ✕
           </button>
         </div>
-      </form>
+
+        <div className="reply-original-preview">
+          <small>Mensaje original:</small>
+          <p>"{mensajeSeleccionado.text}"</p>
+        </div>
+
+        <form onSubmit={manejarEnvio} className="reply-form">
+          <textarea
+            ref={textareaRef}
+            value={textoRespuesta}
+            onChange={(e) => setTextoRespuesta(e.target.value)}
+            placeholder="Escribe tu respuesta libre..."
+            rows="4"
+            disabled={enviando}
+          />
+
+          {error && <p className="error-text">{error}</p>}
+
+          <div className="reply-actions">
+            <button type="button" onClick={alCerrar} className="btn-cancelar" disabled={enviando}>
+              Cancelar
+            </button>
+            <button type="submit" className="btn-enviar" disabled={enviando || !textoRespuesta.trim()}>
+              {enviando ? 'Enviando...' : 'Enviar Respuesta'}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 };

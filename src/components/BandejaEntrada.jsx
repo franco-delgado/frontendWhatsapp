@@ -21,16 +21,21 @@ export const BandejaEntrada = () => {
     return guardado !== null ? JSON.parse(guardado) : true;
   });
 
-  // Referencia para guardar la cantidad de mensajes de la consulta anterior
+  // Referencias para evitar problemas de scopes dentro del setInterval
   const prevMensajesCountRef = useRef(0);
-
-  // Referencia al contenedor de mensajes para controlar el scroll interno sin desplazar el viewport
+  const sonidoActivoRef = useRef(sonidoActivo);
+  const mensajeSeleccionadoRef = useRef(mensajeSeleccionado);
   const contenedorMensajesRef = useRef(null);
 
-  // Guardar preferencia de sonido en localStorage al cambiar
+  // Sincronizamos referencias en cada cambio
   useEffect(() => {
+    sonidoActivoRef.current = sonidoActivo;
     localStorage.setItem("notificacion_sonora_activa", JSON.stringify(sonidoActivo));
   }, [sonidoActivo]);
+
+  useEffect(() => {
+    mensajeSeleccionadoRef.current = mensajeSeleccionado;
+  }, [mensajeSeleccionado]);
 
   // Función para reproducir el tono de notificación
   const reproducirSonidoNotificacion = () => {
@@ -104,6 +109,12 @@ export const BandejaEntrada = () => {
   const obtenerMensajes = async () => {
     try {
       const response = await fetch(`${URL_BACKEND}/api/mensajes`);
+
+      // Validación estricta para respuestas de error (como HTTP 500)
+      if (!response.ok) {
+        throw new Error(`Servidor respondió con código ${response.status}`);
+      }
+
       const data = await response.json();
 
       let nuevosMensajes = [];
@@ -115,7 +126,7 @@ export const BandejaEntrada = () => {
         nuevosMensajes = data.mensajes;
       }
 
-      // Normalizamos la estructura para que coincida con lo que el componente espera
+      // Normalización de datos
       const mensajesMapeados = nuevosMensajes.map((m) => {
         let tipoCalculado = 'text';
         const mime = m.tipo_mime || m.mime_type || '';
@@ -128,17 +139,31 @@ export const BandejaEntrada = () => {
         return {
           _id: m.id || m._id,
           id: m.id || m._id,
-          from: m.from || m.remitente || m.sender || 'Desconocido',
+          // ANTES esto era el string completo del remitente
+          // ("Franco (549...)" o "Soporte (549...)"), así que cada número
+          // aparecía como DOS conversaciones distintas: una para lo que
+          // te escribían y otra para lo que respondía Soporte/la IA.
+          // Agrupamos por el número limpio, que es igual para ambos lados.
+          from:
+            m.numero ||
+            String(m.remitente || m.sender || m.from || '').replace(/\D/g, '') ||
+            'Desconocido',
+          // true = lo mandó el cliente, false = lo mandó Soporte (manual o IA).
+          entrante:
+            m.entrante !== undefined
+              ? m.entrante
+              : !String(m.remitente || m.sender || '').startsWith('Soporte ('),
           text: m.text || m.cuerpo || m.body || '',
           timestamp: m.timestamp || m.created_at,
           mediaUrl: m.mediaUrl || m.URL_de_medios || m.media_url || '',
           type: m.type || tipoCalculado,
-          nombre: m.nombre || m.from || m.remitente || m.sender
+          nombre: m.nombre || m.remitente || m.from || m.sender
         };
       });
 
+      // Lógica de notificación por sonido
       if (
-        sonidoActivo &&
+        sonidoActivoRef.current &&
         mensajesMapeados.length > prevMensajesCountRef.current &&
         prevMensajesCountRef.current !== 0
       ) {
@@ -147,7 +172,7 @@ export const BandejaEntrada = () => {
 
       prevMensajesCountRef.current = mensajesMapeados.length;
 
-      // Se evita actualizar el estado si los datos no cambiaron (evita re-renders y scroll saltones)
+      // Evita re-renders innecesarios
       setMensajes((prev) => {
         if (JSON.stringify(prev) === JSON.stringify(mensajesMapeados)) {
           return prev;
@@ -155,7 +180,7 @@ export const BandejaEntrada = () => {
         return mensajesMapeados;
       });
     } catch (error) {
-      console.error('Error al obtener mensajes:', error);
+      console.error('[Error al consultar API mensajes]:', error.message);
     } finally {
       setCargando(false);
     }
@@ -252,20 +277,21 @@ export const BandejaEntrada = () => {
     }
   };
 
+  // Polling único y estable
   useEffect(() => {
-  obtenerMensajes();
-
-  // Si hay un mensaje seleccionado (modal abierto), no ejecutar el polling
-  if (mensajeSeleccionado) return;
-
-  const interval = setInterval(() => {
     obtenerMensajes();
-  }, 8000);
 
-  return () => clearInterval(interval);
-}, [sonidoActivo, mensajeSeleccionado]);
+    const interval = setInterval(() => {
+      // Solo consulta si el modal de respuesta no está abierto
+      if (!mensajeSeleccionadoRef.current) {
+        obtenerMensajes();
+      }
+    }, 8000);
 
-  // Scroll interno directo sobre el contenedor sin mover la página completa
+    return () => clearInterval(interval);
+  }, []); // Array de dependencias vacío para no reiniciar el timer en re-renders
+
+  // Scroll automático dentro del historial
   useEffect(() => {
     if (contactoActivo && contenedorMensajesRef.current) {
       contenedorMensajesRef.current.scrollTop = contenedorMensajesRef.current.scrollHeight;
@@ -474,9 +500,21 @@ export const BandejaEntrada = () => {
                   key={idMensaje}
                   className={`message-card ${isSelected ? 'selected' : ''}`}
                   onClick={() => setMensajeSeleccionado(msg)}
-                  style={{ cursor: 'pointer', position: 'relative' }}
+                  style={{
+                    cursor: 'pointer',
+                    position: 'relative',
+                    maxWidth: '75%',
+                    alignSelf: msg.entrante ? 'flex-start' : 'flex-end',
+                    backgroundColor: msg.entrante ? '#ffffff' : '#dcf8c6',
+                    border: '1px solid #ddd',
+                    borderRadius: '8px',
+                    padding: '8px 10px'
+                  }}
                 >
-                  <div className="message-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div className="message-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
+                    <small style={{ fontWeight: 'bold', color: msg.entrante ? '#555' : '#2e7d32' }}>
+                      {msg.entrante ? `👤 ${msg.nombre || 'Cliente'}` : '🎧 Soporte'}
+                    </small>
                     <small className="message-time">
                       {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString() : ''}
                     </small>

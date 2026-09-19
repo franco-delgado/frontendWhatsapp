@@ -380,22 +380,6 @@ export const BandejaEntrada = () => {
           {/* Aviso push con la app cerrada (sonido del sistema) */}
           <BotonNotificaciones />
 
-          {/* Beep interno mientras la app está abierta */}
-          <button
-            onClick={() => setSonidoActivo(!sonidoActivo)}
-            style={{
-              padding: '6px 12px',
-              borderRadius: '5px',
-              border: '1px solid #ccc',
-              cursor: 'pointer',
-              backgroundColor: sonidoActivo ? '#28a745' : '#6c757d',
-              color: '#fff',
-              fontWeight: 'bold',
-              transition: 'background-color 0.2s ease'
-            }}
-          >
-            {sonidoActivo ? '🔔 Sonido Activado' : '🔕 Sonido Silenciado'}
-          </button>
 
           <button onClick={limpiarMensajes} className="btn-vaciar">
             Vaciar Todo

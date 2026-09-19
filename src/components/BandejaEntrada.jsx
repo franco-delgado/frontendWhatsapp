@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import "./bandejaEntrada.css";
 import { ContestarMensaje } from './contestarMensaje';
+import { BotonNotificaciones } from './BotonNotificaciones';
 
 export const BandejaEntrada = () => {
   const [mensajes, setMensajes] = useState([]);
@@ -277,6 +278,26 @@ export const BandejaEntrada = () => {
     }
   };
 
+  // Al tocar una notificación push: abre directo la conversación.
+  // - App cerrada: el service worker abre "/?chat=NUMERO".
+  // - App ya abierta: el service worker manda un postMessage.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const chat = params.get('chat');
+    if (chat) {
+      setContactoActivo(chat.replace(/\D/g, ''));
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+
+    const alMensaje = (event) => {
+      if (event.data?.type === 'abrir-chat' && event.data.numero) {
+        setContactoActivo(String(event.data.numero).replace(/\D/g, ''));
+      }
+    };
+    navigator.serviceWorker?.addEventListener('message', alMensaje);
+    return () => navigator.serviceWorker?.removeEventListener('message', alMensaje);
+  }, []);
+
   // Polling único y estable
   useEffect(() => {
     obtenerMensajes();
@@ -352,10 +373,14 @@ export const BandejaEntrada = () => {
 
   return (
     <div className="inbox-container">
-      <div className="inbox-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="inbox-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
         <h2>📩 Bandeja de Entrada Meta API</h2>
 
-        <div style={{ display: 'flex', gap: '10px' }}>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
+          {/* Aviso push con la app cerrada (sonido del sistema) */}
+          <BotonNotificaciones />
+
+          {/* Beep interno mientras la app está abierta */}
           <button
             onClick={() => setSonidoActivo(!sonidoActivo)}
             style={{

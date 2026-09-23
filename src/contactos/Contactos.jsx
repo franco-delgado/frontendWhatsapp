@@ -1,5 +1,17 @@
 import React, { useState, useEffect } from "react";
 import "./Contactos.css";
+import useRespuestasContactos from "../hooks/useRespuestasContactos";
+
+const formatearFecha = (iso) =>
+  iso
+    ? new Date(iso).toLocaleString("es-AR", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : "";
 
 export default function Contactos() {
   // Estado para la lista de contactos
@@ -19,6 +31,14 @@ export default function Contactos() {
       setContactos(contactosLimpios);
     }
   }, []);
+
+  // Respuestas automáticas (según los mensajes entrantes del backend)
+  const { obtenerRespuesta, cargando: cargandoRespuestas, error: errorRespuestas } =
+    useRespuestasContactos();
+
+  // Filtros
+  const [filtroRespuesta, setFiltroRespuesta] = useState("todos"); // todos | respondieron | sinRespuesta
+  const [filtroAlta, setFiltroAlta] = useState("todos"); // todos | conAlta | sinAlta
 
   // Estados para el formulario de creación
   const [nombre, setNombre] = useState("");
@@ -52,6 +72,8 @@ export default function Contactos() {
       nombre,
       numero: numeroLimpio,
       monto: parseFloat(monto),
+      alta: false,
+      fechaAlta: null,
     };
 
     setContactos([...contactos, nuevoContacto]);
@@ -94,6 +116,21 @@ export default function Contactos() {
     setIdEditando(null); // Cierra el modo edición
   };
 
+  // Botón de alta: alterna entre "dada de alta" y "sin alta" y guarda la fecha
+  const toggleAlta = (id) => {
+    setContactos(
+      contactos.map((c) =>
+        c.id === id
+          ? {
+              ...c,
+              alta: !c.alta,
+              fechaAlta: !c.alta ? new Date().toISOString() : null,
+            }
+          : c
+      )
+    );
+  };
+
   // Función para eliminar un contacto
   const handleEliminar = (id) => {
     const confirmar = window.confirm(
@@ -104,6 +141,21 @@ export default function Contactos() {
       setContactos(filtrados);
     }
   };
+
+  // Contadores y lista filtrada
+  const totalRespondieron = contactos.filter((c) => obtenerRespuesta(c.numero)).length;
+  const totalConAlta = contactos.filter((c) => c.alta).length;
+
+  const contactosFiltrados = contactos.filter((c) => {
+    const respondio = Boolean(obtenerRespuesta(c.numero));
+    if (filtroRespuesta === "respondieron" && !respondio) return false;
+    if (filtroRespuesta === "sinRespuesta" && respondio) return false;
+    if (filtroAlta === "conAlta" && !c.alta) return false;
+    if (filtroAlta === "sinAlta" && c.alta) return false;
+    return true;
+  });
+
+  const hayFiltros = filtroRespuesta !== "todos" || filtroAlta !== "todos";
 
   return (
     <div className="contactos-container">
@@ -138,9 +190,65 @@ export default function Contactos() {
       </form>
 
       {/* Lista de Contactos */}
-      <h3 className="lista-titulo">Contactos Guardados ({contactos.length})</h3>
+      <h3 className="lista-titulo">
+        Contactos Guardados ({hayFiltros ? `${contactosFiltrados.length} de ` : ""}
+        {contactos.length})
+      </h3>
+
+      {/* Filtros */}
+      <div className="filtros">
+        <div className="filtro-grupo">
+          <span className="filtro-label">¿Respondió?</span>
+          <div className="filtro-chips">
+            {[
+              ["todos", `Todos (${contactos.length})`],
+              ["respondieron", `💬 Respondieron (${totalRespondieron})`],
+              ["sinRespuesta", `Sin respuesta (${contactos.length - totalRespondieron})`],
+            ].map(([valor, texto]) => (
+              <button
+                key={valor}
+                type="button"
+                className={`chip ${filtroRespuesta === valor ? "chip-activo" : ""}`}
+                onClick={() => setFiltroRespuesta(valor)}
+              >
+                {texto}
+              </button>
+            ))}
+          </div>
+          {errorRespuestas && (
+            <small className="filtro-aviso">
+              ⚠️ No se pudo consultar los mensajes del servidor; el filtro de respuestas
+              puede estar incompleto.
+            </small>
+          )}
+          {cargandoRespuestas && !errorRespuestas && (
+            <small className="filtro-aviso">Consultando respuestas…</small>
+          )}
+        </div>
+
+        <div className="filtro-grupo">
+          <span className="filtro-label">Alta</span>
+          <div className="filtro-chips">
+            {[
+              ["todos", `Todos (${contactos.length})`],
+              ["conAlta", `✅ Con alta (${totalConAlta})`],
+              ["sinAlta", `⏳ Sin alta (${contactos.length - totalConAlta})`],
+            ].map(([valor, texto]) => (
+              <button
+                key={valor}
+                type="button"
+                className={`chip ${filtroAlta === valor ? "chip-activo" : ""}`}
+                onClick={() => setFiltroAlta(valor)}
+              >
+                {texto}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
       <ul className="contactos-lista">
-        {contactos.map((c) => (
+        {contactosFiltrados.map((c) => (
           <React.Fragment key={c.id}>
             {idEditando === c.id ? (
               /* VISTA DE EDICIÓN */
@@ -187,6 +295,28 @@ export default function Contactos() {
                   <strong>{c.nombre}</strong>
                   <span className="contacto-tel">Tel: {c.numero}</span>
                   <span className="contacto-monto">Deuda: ${c.monto}</span>
+                  <div className="contacto-badges">
+                    {(() => {
+                      const r = obtenerRespuesta(c.numero);
+                      return r ? (
+                        <span
+                          className="badge badge-respondio"
+                          title={`Último mensaje: ${formatearFecha(r.ultima)}`}
+                        >
+                          💬 Respondió ({r.cantidad})
+                        </span>
+                      ) : (
+                        <span className="badge badge-neutro">Sin respuesta</span>
+                      );
+                    })()}
+                    {c.alta ? (
+                      <span className="badge badge-alta">
+                        ✅ Dada de alta{c.fechaAlta ? ` · ${formatearFecha(c.fechaAlta).split(",")[0]}` : ""}
+                      </span>
+                    ) : (
+                      <span className="badge badge-sin-alta">⏳ Sin alta</span>
+                    )}
+                  </div>
                 </div>
                 <div className="contacto-acciones">
                   {/*<button
@@ -195,6 +325,12 @@ export default function Contactos() {
                   >
                     📱 Mensaje
                   </button>*/}
+                  <button
+                    onClick={() => toggleAlta(c.id)}
+                    className={c.alta ? "btn-alta btn-alta-quitar" : "btn-alta"}
+                  >
+                    {c.alta ? "Quitar alta" : "Dar de alta"}
+                  </button>
                   <button
                     onClick={() => activarEdicion(c)}
                     className="btn-cancelar"
@@ -215,6 +351,9 @@ export default function Contactos() {
         ))}
         {contactos.length === 0 && (
           <p className="sin-contactos">No hay contactos registrados todavía.</p>
+        )}
+        {contactos.length > 0 && contactosFiltrados.length === 0 && (
+          <p className="sin-contactos">Ningún contacto coincide con los filtros.</p>
         )}
       </ul>
     </div>

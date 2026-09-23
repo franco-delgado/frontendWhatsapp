@@ -26,52 +26,6 @@ export default function QrPanel() {
     }
   };
 
-  /*
-  const obtenerQR = async () => {
-    setCargando(true);
-    setQrCode("");
-    setQrMsg("Consultando código en el servidor...");
-
-    try {
-      // Primero actualizamos el estado general
-      const resStatus = await fetch("https://backend-whatsapp-docker.onrender.com/status");
-      const dataStatus = await resStatus.json();
-      setEstado(dataStatus.estado);
-
-      if (dataStatus.estado === "INICIALIZANDO") {
-        setQrMsg(
-          "El servidor está iniciando Puppeteer. Esperá a que cambie el estado arriba.",
-        );
-        setCargando(false);
-        return;
-      }
-
-      if (dataStatus.estado === "CONECTADO") {
-        setQrMsg("¡WhatsApp ya está conectado de forma exitosa!");
-        setCargando(false);
-        return;
-      }
-
-      // Si efectivamente está esperando el QR, lo traemos
-      const res = await fetch("https://backend-whatsapp-docker.onrender.com/qr-code");
-      const data = await res.json();
-
-      if (!data.qr) {
-        setQrMsg(
-          "WhatsApp todavía no generó el string del código. Esperá unos segundos.",
-        );
-        return;
-      }
-
-      setQrMsg("¡Listo! Escaneá este código:");
-      setQrCode(data.qr);
-    } catch (err) {
-      setQrMsg("Error al obtener el QR.");
-    } finally {
-      setCargando(false);
-    }
-  };
-  */
 
   const enviarMensajes = async () => {
     if (estado !== "CONECTADO") {

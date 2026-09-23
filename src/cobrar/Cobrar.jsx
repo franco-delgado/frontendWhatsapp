@@ -10,8 +10,9 @@ export default function Cobrar() {
 
   const [seleccionados, setSeleccionados] = useState([]);
   
-  // Estado para el texto personalizado que se sumará al nombre del contacto
-  const [textoPersonalizado, setTextoPersonalizado] = useState("");
+  // Estados para las variables de la plantilla de Meta
+  const [tituloVar, setTituloVar] = useState("");          // Header {{1}}
+  const [nombreNegocio, setNombreNegocio] = useState("");   // Body {{2}} (Nombre del negocio)
 
   const { enviarMasivo, loading: cargando } = useEnviarWhatsApp();
 
@@ -35,35 +36,40 @@ export default function Cobrar() {
       return;
     }
 
-    const contactsPayload = listaAEnviar.map((usuario) => {
-      let numeroLimpio = usuario.numero.replace(/\D/g, "");
+    const valTitulo = tituloVar.trim() || "Resumen de Cuenta";
+    const valNegocio = nombreNegocio.trim() || "Farmanor";
 
-      if (numeroLimpio.includes("3827402013")) {
-        numeroLimpio = "54382715402013";
+    const contactsPayload = listaAEnviar.map((usuario) => {
+      // Limpieza del número de teléfono
+      let numeroLimpio = usuario.numero.replace(/\D/g, "");
+      if (!numeroLimpio.startsWith("54")) {
+        numeroLimpio = `54${numeroLimpio}`;
       }
 
       const nombreCliente = usuario.nombre?.trim() || "Cliente";
-      const textoBase = textoPersonalizado.trim();
 
-      // Si hay texto personalizado, lo une al nombre (ej: "Estimado Juan"); de lo contrario solo usa el nombre
-      const variable1 = textoBase ? `${nombreCliente} ${textoBase}` : nombreCliente;
+      // {{1}} del cuerpo: Nombre agendado + texto adicional opcional
+      const valCuerpo1 = nombreCliente;
+      
+      // {{3}} del cuerpo: Monto del cliente
+      const valMonto = usuario.monto || 0;
 
       return {
         number: numeroLimpio,
         type: "template",
-        templateName: "mensaje_mensual",
+        templateName: "mensaje_mensual2109", // NOMBRE DE TU PLANTILLA
         languageCode: "es_AR",
-        parameters: [
-          variable1,                  // Variable {{1}} (Texto opcional + Nombre)
-          `$${usuario.monto || 0}`    // Variable {{2}} (Monto)
-        ],
+        parameters: {
+          header: [valTitulo],                   // {{1}} del Encabezado
+          body: [valCuerpo1, valNegocio, valMonto] // {{1}}, {{2}} y {{3}} del Cuerpo
+        }
       };
     });
 
     try {
       const datos = await enviarMasivo(contactsPayload);
 
-      if (datos.success) {
+      if (datos?.success) {
         alert(`¡Mensajes enviados con éxito! Procesados: ${datos.processed} envíos. 🚀`);
         console.log("Detalle del resultado:", datos.results);
       }
@@ -77,40 +83,77 @@ export default function Cobrar() {
     <div className="cobrar-container">
       <h2 className="cobrar-title">💰 Recordatorio de Cobros Masivos</h2>
 
-      {/* Input para agregar texto previo al nombre del cliente */}
-      <div className="input-texto-box" style={{ marginBottom: "15px" }}>
-        <label
-          htmlFor="textoPersonalizado"
-          style={{ display: "block", fontWeight: "bold", marginBottom: "5px" }}
-        >
-          Texto adicional previo al nombre del cliente:
-        </label>
-        <input
-          id="textoPersonalizado"
-          type="text"
-          placeholder="Ej: Estimado/a, Sr/a, Hola..."
-          value={textoPersonalizado}
-          onChange={(e) => setTextoPersonalizado(e.target.value)}
-          style={{
-            width: "100%",
-            padding: "8px 12px",
-            borderRadius: "5px",
-            border: "1px solid #ccc",
-            fontSize: "14px",
-          }}
-        />
+      {/* Inputs para configurar las variables de la plantilla */}
+      <div style={{ display: "flex", gap: "10px", marginBottom: "15px", flexWrap: "wrap" }}>
+        <div style={{ flex: 1, minWidth: "200px" }}>
+          <label
+            htmlFor="tituloVar"
+            style={{ display: "block", fontWeight: "bold", marginBottom: "5px", fontSize: "13px" }}
+          >
+            Título (Encabezado {"{{1}}"}):
+          </label>
+          <input
+            id="tituloVar"
+            type="text"
+            placeholder="ej: Resumen Mensual"
+            value={tituloVar}
+            onChange={(e) => setTituloVar(e.target.value)}
+            style={{ width: "100%", padding: "8px", borderRadius: "5px", border: "1px solid #ccc", fontSize: "14px" }}
+          />
+        </div>
+
+        
+
+        <div style={{ flex: 1, minWidth: "200px" }}>
+          <label
+            htmlFor="nombreNegocio"
+            style={{ display: "block", fontWeight: "bold", marginBottom: "5px", fontSize: "13px" }}
+          >
+            Nombre Negocio (Cuerpo {"{{2}}"}):
+          </label>
+          <input
+            id="nombreNegocio"
+            type="text"
+            placeholder="ej: Farmanor"
+            value={nombreNegocio}
+            onChange={(e) => setNombreNegocio(e.target.value)}
+            style={{ width: "100%", padding: "8px", borderRadius: "5px", border: "1px solid #ccc", fontSize: "14px" }}
+          />
+        </div>
       </div>
 
+      {/* Vista previa de la Plantilla de Cobro */}
       <div className="preview-box">
-        <p>
-          <strong>Formato de Plantilla Meta (Business API):</strong>
+        <p style={{ margin: "0 0 5px 0", fontSize: "12px", color: "#666" }}>
+          <strong>Vista previa de la Plantilla:</strong>
         </p>
-        <p>
-          "Saludos{" "}
-          <strong style={{ color: "#007bff" }}>
-            {textoPersonalizado.trim() ? `[Nombre] ${textoPersonalizado.trim()}` : "[Nombre Del Cliente]"}
-          </strong>{" "}
-          le escribimos desde DFservice para informarle que su cuenta esta disponible con un monto de [<strong>$*****</strong>] para saldar. Recuerde saldarla antes del 15 para evitar intereses. Saludos☺️☺️"
+
+        <h4 style={{ margin: "0 0 8px 0", color: "#007bff", fontStyle: "italic" }}>
+          {tituloVar.trim() || "{{1}}"}
+        </h4>
+
+        <div style={{ margin: 0, fontSize: "13px", lineHeight: "1.4", color: "#444" }}>
+          <p style={{ margin: "0 0 8px 0" }}>
+            Hola{" "}
+            <strong style={{ color: "#28a745" }}>
+              {"{Nombre agendado}"}
+            </strong>
+            . Le escribimos desde{" "}
+            <strong style={{ color: "#28a745" }}>{nombreNegocio.trim() || "{{2}}"}</strong> para informarle que ya se encuentra disponible el resumen de su cuenta correspondiente al consumo del mes, por un monto de{" "}
+            <strong style={{ color: "#d9534f" }}>${"{Monto a cobrar}"}</strong>.
+          </p>
+
+          <p style={{ margin: "0 0 8px 0" }}>
+            Le recordamos realizar el pago antes del día 15 para evitar el recargo de intereses.
+          </p>
+
+          <p style={{ margin: 0 }}>
+            Quedamos a su disposición ante cualquier duda o consulta. ¡Que tenga un excelente día!
+          </p>
+        </div>
+
+        <p style={{ margin: "10px 0 0 0", fontSize: "11px", color: "#999" }}>
+          * "{"{Nombre agendado}"}" y "{"{Monto a cobrar}"}" se completan automáticamente según los datos asignados a cada contacto.
         </p>
       </div>
 
@@ -118,11 +161,12 @@ export default function Cobrar() {
         onClick={enviarCobro} 
         disabled={cargando} 
         className="btn-enviar"
+        style={{ width: "100%", marginTop: "15px" }}
       >
-        {cargando ? "Enviando invitaciones..." : `Enviar Mensajes (${seleccionados.length})`}
+        {cargando ? "Enviando..." : `Enviar Mensajes de Cobro (${seleccionados.length})`}
       </button>
 
-      <div className="usuarios-section">
+      <div className="usuarios-section" style={{ marginTop: "20px" }}>
         <h3>Seleccionar Destinatarios</h3>
         <div className="usuarios-lista">
           {contactos.map((usuario) => (
@@ -140,9 +184,10 @@ export default function Cobrar() {
                       color: "#d9534f",
                       fontSize: "12px",
                       marginLeft: "8px",
+                      fontWeight: "bold"
                     }}
                   >
-                    (Deuda: ${usuario.monto})
+                    (Monto a cobrar: ${usuario.monto})
                   </span>
                 )}
               </div>
@@ -158,8 +203,7 @@ export default function Cobrar() {
                 margin: "10px 0",
               }}
             >
-              No hay contactos guardados. Andá a la pestaña "Contactos" para
-              registrar el primero.
+              No hay contactos guardados.
             </p>
           )}
         </div>

@@ -110,6 +110,22 @@ export const BandejaEntrada = () => {
     return `${URL_BACKEND}${ruta.startsWith('/') ? '' : '/'}${ruta}`;
   };
 
+  // Tildes estilo WhatsApp para los mensajes que mandó Soporte/bot.
+  const tildesEstado = (estado) => {
+    switch (estado) {
+      case 'sent':
+        return <span title="Enviado" style={{ color: '#8696a0' }}>✓</span>;
+      case 'delivered':
+        return <span title="Entregado" style={{ color: '#8696a0' }}>✓✓</span>;
+      case 'read':
+        return <span title="Leído" style={{ color: '#34b7f1' }}>✓✓</span>;
+      case 'failed':
+        return <span title="No se pudo enviar" style={{ color: '#dc3545' }}>⚠️ No enviado</span>;
+      default:
+        return null; // mensajes viejos, sin estado guardado
+    }
+  };
+
   // ---- Estado del bot de IA por contacto ----
   const obtenerPausasIA = async () => {
     try {
@@ -201,6 +217,8 @@ export const BandejaEntrada = () => {
           timestamp: m.timestamp || m.created_at,
           mediaUrl: m.mediaUrl || m.URL_de_medios || m.media_url || '',
           type: m.type || tipoCalculado,
+          // sent | delivered | read | failed (solo mensajes salientes)
+          estado: m.estado || m.status || null,
           nombre: m.nombre || m.remitente || m.from || m.sender
         };
       });
@@ -588,6 +606,9 @@ export const BandejaEntrada = () => {
                     </small>
                     <small className="message-time">
                       {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString() : ''}
+                      {!msg.entrante && (
+                        <span style={{ marginLeft: '6px', fontWeight: 'bold' }}>{tildesEstado(msg.estado)}</span>
+                      )}
                     </small>
 
                     <button

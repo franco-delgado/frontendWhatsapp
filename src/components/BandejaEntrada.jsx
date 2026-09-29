@@ -13,6 +13,10 @@ export const BandejaEntrada = () => {
   // Mensaje concreto seleccionado dentro de la conversación (para responder)
   const [mensajeSeleccionado, setMensajeSeleccionado] = useState(null);
 
+  // Contactos con el bot de IA pausado (porque contestaste vos a mano).
+  // Cada item: { numero: '3827402013', pausado_hasta: '2026-...' }
+  const [pausasIA, setPausasIA] = useState([]);
+
   // URL del servidor Express conectado a MongoDB
   const URL_BACKEND = 'https://backend-whatsapp-docker.onrender.com';
   
@@ -106,8 +110,47 @@ export const BandejaEntrada = () => {
     return `${URL_BACKEND}${ruta.startsWith('/') ? '' : '/'}${ruta}`;
   };
 
+  // ---- Estado del bot de IA por contacto ----
+  const obtenerPausasIA = async () => {
+    try {
+      const response = await fetch(`${URL_BACKEND}/api/ia/pausas`);
+      if (!response.ok) return;
+      const data = await response.json();
+      if (data.success && Array.isArray(data.data)) {
+        setPausasIA((prev) =>
+          JSON.stringify(prev) === JSON.stringify(data.data) ? prev : data.data
+        );
+      }
+    } catch (error) {
+      console.error('[Error al consultar pausas de IA]:', error.message);
+    }
+  };
+
+  // El backend guarda los últimos 10 dígitos; comparamos igual acá.
+  const pausaDeContacto = (numero) => {
+    const k = String(numero || '').replace(/\D/g, '').slice(-10);
+    if (!k) return null;
+    const pausa = pausasIA.find(
+      (p) => p.numero === k && new Date(p.pausado_hasta).getTime() > Date.now()
+    );
+    return pausa ? new Date(pausa.pausado_hasta) : null;
+  };
+
+  const reactivarBot = async (numero) => {
+    try {
+      const k = String(numero || '').replace(/\D/g, '').slice(-10);
+      const response = await fetch(`${URL_BACKEND}/api/ia/pausas/${k}`, { method: 'DELETE' });
+      if (!response.ok) throw new Error(`Código ${response.status}`);
+      await obtenerPausasIA();
+    } catch (error) {
+      console.error('[Error al reactivar el bot]:', error.message);
+      alert('No se pudo reactivar el bot. Probá de nuevo.');
+    }
+  };
+
   // Función para obtener los mensajes guardados en el backend y normalizarlos
   const obtenerMensajes = async () => {
+    obtenerPausasIA(); // se refresca junto con los mensajes
     try {
       const response = await fetch(`${URL_BACKEND}/api/mensajes`);
 
@@ -410,7 +453,14 @@ export const BandejaEntrada = () => {
                 }}
               >
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', overflow: 'hidden' }}>
-                  <strong>👤 {nombreMostrar} ({c.from})</strong>
+                  <strong>
+                    👤 {nombreMostrar} ({c.from})
+                    {pausaDeContacto(c.from) && (
+                      <span title="Contestaste vos: el bot no responde a este contacto por un rato" style={{ marginLeft: '8px', fontSize: '12px', fontWeight: 'normal', color: '#b26a00' }}>
+                        ⏸️ bot pausado
+                      </span>
+                    )}
+                  </strong>
                   <span
                     style={{
                       color: '#666',
@@ -473,6 +523,18 @@ export const BandejaEntrada = () => {
               ←
             </button>
             <strong style={{ flex: 1 }}>👤 {nombreContactoActivo} ({contactoActivo})</strong>
+            {pausaDeContacto(contactoActivo) && (
+              <span style={{ fontSize: '13px', color: '#b26a00', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                ⏸️ Bot pausado hasta las {pausaDeContacto(contactoActivo).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                <button
+                  onClick={() => reactivarBot(contactoActivo)}
+                  title="Volver a activar las respuestas automáticas para este contacto"
+                  style={{ background: 'transparent', border: '1px solid #b26a00', color: '#b26a00', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', padding: '2px 8px' }}
+                >
+                  Reactivar bot
+                </button>
+              </span>
+            )}
             <button
               onClick={() => eliminarConversacion(contactoActivo)}
               title="Eliminar toda la conversación"
@@ -576,7 +638,7 @@ export const BandejaEntrada = () => {
           mensajeSeleccionado={mensajeSeleccionado}
           alCerrar={() => setMensajeSeleccionado(null)}
           alEnviarExitoso={() => {
-            alert('¡Mensaje enviado con éxito!');
+            alert('¡Mensaje enviado con éxito! El bot queda pausado con este contacto por un rato.');
             setMensajeSeleccionado(null);
             obtenerMensajes();
           }}

@@ -46,7 +46,8 @@ export const ContestarMensaje = ({ mensajeSeleccionado, alCerrar, alEnviarExitos
         setTextoRespuesta('');
         if (alEnviarExitoso) alEnviarExitoso();
       } else {
-        setError(data.message || 'Error al enviar el mensaje.');
+        // El backend devuelve el motivo en "error"; antes solo se leía "message".
+        setError(data.error || data.message || 'Error al enviar el mensaje.');
       }
     } catch (err) {
       console.error('Error al enviar la respuesta:', err);
@@ -85,6 +86,10 @@ export const ContestarMensaje = ({ mensajeSeleccionado, alCerrar, alEnviarExitos
             rows="4"
             disabled={enviando}
           />
+
+          <small style={{ color: '#b26a00' }}>
+            ⏸️ Al enviar, el bot automático deja de responder a este contacto por 1 hora.
+          </small>
 
           {error && <p className="error-text">{error}</p>}
 

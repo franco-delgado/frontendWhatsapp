@@ -54,11 +54,9 @@ function FilaUsuario({ u, esYo, alGuardar, alVer }) {
         </span>
       </div>
       <small className="usr-detalle">
-        {u.role === 'admin' && !u.phone_number_id
-          ? 'Número de WhatsApp: el principal del servidor'
-          : u.phone_number_id
-          ? `Número de WhatsApp (ID): ${u.phone_number_id}`
-          : '⚠️ Sin número de WhatsApp asignado (no puede enviar)'}
+        {u.usa_numero_compartido
+          ? '📞 Usa el número compartido del servidor'
+          : `📞 Número propio (ID): ${u.phone_number_id}`}
       </small>
 
       <div className="usr-acciones">
@@ -74,7 +72,7 @@ function FilaUsuario({ u, esYo, alGuardar, alVer }) {
       {editando && (
         <form className="usr-form" onSubmit={guardarEdicion}>
           <input type="password" placeholder="Nueva contraseña (vacío = no cambiar)" autoComplete="new-password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
-          <input type="text" inputMode="numeric" placeholder="Phone Number ID de WhatsApp" value={form.phone_number_id} onChange={(e) => setForm({ ...form, phone_number_id: e.target.value })} />
+          <input type="text" inputMode="numeric" placeholder="Número propio: Phone Number ID (vacío = usa el compartido)" value={form.phone_number_id} onChange={(e) => setForm({ ...form, phone_number_id: e.target.value })} />
           <input type="password" placeholder={u.tiene_token ? 'Token propio cargado (vacío = no cambiar)' : 'Token de Meta propio (opcional)'} autoComplete="off" value={form.meta_access_token} onChange={(e) => setForm({ ...form, meta_access_token: e.target.value })} />
           <label className="usr-check">
             <input type="checkbox" checked={form.ia_activa} onChange={(e) => setForm({ ...form, ia_activa: e.target.checked })} />
@@ -122,7 +120,7 @@ export default function Usuarios({ usuarios, recargar, onVer }) {
         <strong>➕ Agregar usuario</strong>
         <input type="text" placeholder="Nombre de usuario" autoCapitalize="none" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} />
         <input type="password" placeholder="Contraseña (mín. 6)" autoComplete="new-password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
-        <input type="text" inputMode="numeric" placeholder="Phone Number ID de WhatsApp (del panel de Meta)" value={form.phone_number_id} onChange={(e) => setForm({ ...form, phone_number_id: e.target.value })} />
+        <input type="text" inputMode="numeric" placeholder="Número propio: Phone Number ID (vacío = usa el compartido)" value={form.phone_number_id} onChange={(e) => setForm({ ...form, phone_number_id: e.target.value })} />
         <input type="password" placeholder="Token de Meta propio (opcional)" autoComplete="off" value={form.meta_access_token} onChange={(e) => setForm({ ...form, meta_access_token: e.target.value })} />
         <label className="usr-check">
           <input type="checkbox" checked={form.ia_activa} onChange={(e) => setForm({ ...form, ia_activa: e.target.checked })} />
@@ -138,8 +136,9 @@ export default function Usuarios({ usuarios, recargar, onVer }) {
         {error && <p className="usr-error">{error}</p>}
         {ok && <p className="usr-ok">{ok}</p>}
         <small className="usr-detalle">
-          Los mensajes que lleguen al número (Phone Number ID) de este usuario se le asignan solo a él.
-          Sin número asignado puede iniciar sesión pero no recibe ni envía mensajes.
+          Sin número propio, el usuario usa el número compartido: ve y responde solo a sus propios
+          contactos (los que le escribe primero, o los que vos le asignes desde la bandeja).
+          Con número propio (Phone Number ID de Meta) tiene una línea aparte.
         </small>
       </form>
 

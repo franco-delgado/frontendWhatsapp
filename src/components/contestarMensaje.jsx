@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import './bandejaEntrada.css';
 import { apiFetch } from '../api';
 
-export const ContestarMensaje = ({ mensajeSeleccionado, alCerrar, alEnviarExitoso }) => {
+export const ContestarMensaje = ({ mensajeSeleccionado, alCerrar, alEnviarExitoso, nombreContacto }) => {
   const [textoRespuesta, setTextoRespuesta] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState(null);
@@ -37,7 +37,8 @@ export const ContestarMensaje = ({ mensajeSeleccionado, alCerrar, alEnviarExitos
         body: JSON.stringify({
           to: mensajeSeleccionado.from,
           messageText: textoRespuesta,
-          contextMessageId: mensajeSeleccionado.wamid || mensajeSeleccionado.id
+          // Meta espera el id de WhatsApp (wamid), no el id de la base de datos.
+          contextMessageId: mensajeSeleccionado.wamid || null
         }),
       });
 
@@ -66,7 +67,7 @@ export const ContestarMensaje = ({ mensajeSeleccionado, alCerrar, alEnviarExitos
       <div className="reply-container" onClick={(e) => e.stopPropagation()}>
         <div className="reply-header">
           <h4>
-            Responder a: <strong>{mensajeSeleccionado.nombre || mensajeSeleccionado.from}</strong>
+            Responder a: <strong>{nombreContacto || mensajeSeleccionado.from}</strong>
           </h4>
           <button type="button" onClick={alCerrar} className="btn-cerrar">
             ✕

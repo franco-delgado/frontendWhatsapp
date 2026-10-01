@@ -67,7 +67,17 @@ export default function Invitar() {
       const datos = await enviarMasivo(contactsPayload);
 
       if (datos?.success) {
-        alert(`¡Mensajes enviados con éxito! Procesados: ${datos.processed} envíos. 🚀`);
+        const fallidos = datos.fallidos || 0;
+        if (fallidos > 0) {
+          // Por ejemplo, contactos que pertenecen a otro usuario del número compartido.
+          const primero = (datos.results || []).find((r) => r.status === "error");
+          alert(
+            `Enviados: ${datos.enviados ?? datos.processed - fallidos}. No se pudieron enviar: ${fallidos}.` +
+              (primero ? `\nEjemplo: ${primero.number} → ${primero.error}` : "")
+          );
+        } else {
+          alert(`¡Mensajes enviados con éxito! Procesados: ${datos.processed} envíos. 🚀`);
+        }
         console.log("Detalle del resultado:", datos.results);
       }
     } catch (err) {

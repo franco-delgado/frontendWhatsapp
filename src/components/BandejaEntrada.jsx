@@ -5,7 +5,9 @@ import { BotonNotificaciones } from './BotonNotificaciones';
 import { apiFetch, API_URL } from '../api';
 import { claveContactos } from '../contactosStorage';
 
-export const BandejaEntrada = ({ usuarioVistoId = null, soloLectura = false }) => {
+// usuarioVistoId: null = mi bandeja · <id> = bandeja de otro usuario · 'todos' = todas (solo admin).
+// esAdmin + usuarios: permiten ver de quién es cada conversación y reasignarla.
+export const BandejaEntrada = ({ usuarioVistoId = null, soloLectura = false, esAdmin = false, usuarios = [] }) => {
   const [mensajes, setMensajes] = useState([]);
   const [cargando, setCargando] = useState(true);
 
@@ -85,23 +87,37 @@ export const BandejaEntrada = ({ usuarioVistoId = null, soloLectura = false }) =
     }
   };
 
-  // Función auxiliar para obtener el nombre agendado desde localStorage
+  // Nombre del perfil de WhatsApp: el del último mensaje ENTRANTE de ese contacto
+  // (los salientes traen "Soporte" como nombre, que no sirve para identificar al cliente).
+  const nombrePerfil = (from) => {
+    for (let i = mensajes.length - 1; i >= 0; i--) {
+      const m = mensajes[i];
+      if (m.from === from && m.entrante && m.nombre && m.nombre !== 'Desconocido') return m.nombre;
+    }
+    return null;
+  };
+
+  // Nombre agendado (localStorage) si existe; si no, el del perfil de WhatsApp.
+  // Si miro la bandeja de otro usuario, la agenda guardada en este navegador es la mía,
+  // no la suya: ahí se usa siempre el nombre del perfil.
   const obtenerNombreAgendado = (msg) => {
+    const perfil = nombrePerfil(msg.from) || msg.from;
+    if (usuarioVistoId) return perfil;
     try {
       const contactosGuardados = JSON.parse(localStorage.getItem(claveContactos())) || [];
       const numeroLimpio = String(msg.from || "").replace(/\D/g, "");
 
-      if (!numeroLimpio) return msg.nombre || msg.from;
+      if (!numeroLimpio) return perfil;
 
       const contactoEncontrado = contactosGuardados.find((c) => {
         const telContacto = String(c.numero).replace(/\D/g, "");
         return numeroLimpio.endsWith(telContacto) || telContacto.endsWith(numeroLimpio);
       });
 
-      return contactoEncontrado ? contactoEncontrado.nombre : (msg.nombre || msg.from);
+      return contactoEncontrado ? contactoEncontrado.nombre : perfil;
     } catch (error) {
       console.error("Error al leer contactos de localStorage:", error);
-      return msg.nombre || msg.from;
+      return perfil;
     }
   };
 
@@ -224,20 +240,28 @@ export const BandejaEntrada = ({ usuarioVistoId = null, soloLectura = false }) =
           type: m.type || tipoCalculado,
           // sent | delivered | read | failed (solo mensajes salientes)
           estado: m.estado || m.status || null,
+          // id de WhatsApp: se usa para citar el mensaje al responder
+          wamid: m.wamid || null,
+          // dueño de la conversación (solo lo informa el servidor al administrador)
+          usuarioId: m.usuario_id || null,
+          usuarioNombre: m.usuario || null,
           nombre: m.nombre || m.remitente || m.from || m.sender
         };
       });
 
-      // Lógica de notificación por sonido
+      // Lógica de notificación por sonido: solo suena con mensajes ENTRANTES nuevos
+      // (antes también sonaba al enviar vos una respuesta) y no al mirar la bandeja de otro.
+      const cantidadEntrantes = mensajesMapeados.filter((m) => m.entrante).length;
       if (
         sonidoActivoRef.current &&
-        mensajesMapeados.length > prevMensajesCountRef.current &&
+        !soloLectura &&
+        cantidadEntrantes > prevMensajesCountRef.current &&
         prevMensajesCountRef.current !== 0
       ) {
         reproducirSonidoNotificacion();
       }
 
-      prevMensajesCountRef.current = mensajesMapeados.length;
+      prevMensajesCountRef.current = cantidadEntrantes;
 
       // Evita re-renders innecesarios
       setMensajes((prev) => {
@@ -303,22 +327,43 @@ export const BandejaEntrada = ({ usuarioVistoId = null, soloLectura = false }) =
       return;
     }
 
-    const idsAEliminar = mensajes
-      .filter((m) => m.from === from)
-      .map((m) => m._id || m.id)
-      .filter(Boolean);
-
     try {
-      await Promise.all(
-        idsAEliminar.map((id) =>
-          apiFetch(`/api/mensajes/${id}`, { method: 'DELETE' })
-        )
-      );
+      // Un solo pedido: el servidor borra todos los mensajes de ese contacto.
+      const response = await apiFetch(`/api/mensajes/contacto/${encodeURIComponent(from)}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) throw new Error(`Código ${response.status}`);
       setMensajes((prev) => prev.filter((m) => m.from !== from));
       setContactoActivo(null);
     } catch (error) {
       console.error('Error al eliminar la conversación:', error);
       alert('Ocurrió un error al intentar eliminar la conversación.');
+    }
+  };
+
+  // Solo admin: pasa la conversación (con su historial) a otro usuario.
+  const reasignarContacto = async (numero, userId) => {
+    if (!userId) return;
+    const destino = usuarios.find((u) => u.id === userId);
+    if (
+      !window.confirm(
+        `¿Pasar esta conversación a ${destino?.username || 'ese usuario'}? Todo su historial pasa con ella.`
+      )
+    ) {
+      return;
+    }
+    try {
+      const response = await apiFetch('/api/admin/contactos/asignar', {
+        method: 'POST',
+        body: JSON.stringify({ numero, userId }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.success) throw new Error(data.error || `Código ${response.status}`);
+      setContactoActivo(null);
+      await obtenerMensajes();
+    } catch (error) {
+      console.error('[Error al reasignar]:', error.message);
+      alert(`No se pudo reasignar: ${error.message}`);
     }
   };
 
@@ -433,6 +478,11 @@ export const BandejaEntrada = ({ usuarioVistoId = null, soloLectura = false }) =
         })
     : [];
 
+  // Dueño de la conversación abierta (lo informa el servidor solo al administrador).
+  const ultimoDeActiva = mensajesConversacion[mensajesConversacion.length - 1];
+  const duenioActivoId = ultimoDeActiva?.usuarioId || null;
+  const duenioActivoNombre = ultimoDeActiva?.usuarioNombre || null;
+
   const nombreContactoActivo = contactoActivo
     ? obtenerNombreAgendado(mensajesConversacion[mensajesConversacion.length - 1] || { from: contactoActivo })
     : '';
@@ -480,6 +530,11 @@ export const BandejaEntrada = ({ usuarioVistoId = null, soloLectura = false }) =
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', overflow: 'hidden' }}>
                   <strong>
                     👤 {nombreMostrar} ({c.from})
+                    {esAdmin && usuarioVistoId === 'todos' && c.ultimoMensaje.usuarioNombre && (
+                      <span title="Usuario dueño de esta conversación" style={{ marginLeft: '8px', fontSize: '12px', fontWeight: 'normal', background: '#e8f0fe', color: '#1a56b0', borderRadius: '999px', padding: '1px 8px' }}>
+                        de {c.ultimoMensaje.usuarioNombre}
+                      </span>
+                    )}
                     {pausaDeContacto(c.from) && (
                       <span title="Contestaste vos: el bot no responde a este contacto por un rato" style={{ marginLeft: '8px', fontSize: '12px', fontWeight: 'normal', color: '#b26a00' }}>
                         ⏸️ bot pausado
@@ -547,7 +602,27 @@ export const BandejaEntrada = ({ usuarioVistoId = null, soloLectura = false }) =
             >
               ←
             </button>
-            <strong style={{ flex: 1 }}>👤 {nombreContactoActivo} ({contactoActivo})</strong>
+            <strong style={{ flex: 1 }}>
+              👤 {nombreContactoActivo} ({contactoActivo})
+              {esAdmin && duenioActivoNombre && (
+                <small style={{ marginLeft: '8px', fontWeight: 'normal', color: '#1a56b0' }}>· de {duenioActivoNombre}</small>
+              )}
+            </strong>
+            {esAdmin && usuarios.length > 1 && (
+              <select
+                value=""
+                onChange={(e) => reasignarContacto(contactoActivo, e.target.value)}
+                title="Pasar esta conversación (con su historial) a otro usuario"
+                style={{ padding: '4px 6px', borderRadius: '6px', fontSize: '12px' }}
+              >
+                <option value="">↪ Asignar a…</option>
+                {usuarios
+                  .filter((u) => u.activo && u.id !== duenioActivoId)
+                  .map((u) => (
+                    <option key={u.id} value={u.id}>{u.username}</option>
+                  ))}
+              </select>
+            )}
             {!soloLectura && pausaDeContacto(contactoActivo) && (
               <span style={{ fontSize: '13px', color: '#b26a00', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 ⏸️ Bot pausado hasta las {pausaDeContacto(contactoActivo).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -664,6 +739,7 @@ export const BandejaEntrada = ({ usuarioVistoId = null, soloLectura = false }) =
       {mensajeSeleccionado && (
         <ContestarMensaje
           mensajeSeleccionado={mensajeSeleccionado}
+          nombreContacto={nombreContactoActivo}
           alCerrar={() => setMensajeSeleccionado(null)}
           alEnviarExitoso={() => {
             alert('¡Mensaje enviado con éxito! El bot queda pausado con este contacto por un rato.');

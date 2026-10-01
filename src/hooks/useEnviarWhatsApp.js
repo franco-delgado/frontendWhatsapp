@@ -1,9 +1,6 @@
 import { useState, useCallback } from 'react';
 import { apiFetch } from '../api';
 
-// Lee la URL del backend desde el .env.production en Render o usa localhost por defecto
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-
 export function useEnviarWhatsApp() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -17,7 +14,6 @@ export function useEnviarWhatsApp() {
 
     try {
       const response = await apiFetch('/api/mensajes', {
-        baseUrl: API_URL,
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -52,7 +48,6 @@ export function useEnviarWhatsApp() {
 
     try {
       const response = await apiFetch('/send', {
-        baseUrl: API_URL,
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -84,7 +79,6 @@ export function useEnviarWhatsApp() {
 
     try {
       const response = await apiFetch('/send-bulk', {
-        baseUrl: API_URL,
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

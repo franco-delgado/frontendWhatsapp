@@ -39,6 +39,8 @@ function Panel() {
     recargarUsuarios();
   }, [recargarUsuarios]);
 
+  // "todos" = el administrador mira las conversaciones de todos los usuarios juntas.
+  const viendoTodos = esAdmin && usuarioVistoId === "todos";
   const usuarioVisto = esAdmin ? usuarios.find((u) => u.id === usuarioVistoId) || null : null;
 
   return (
@@ -68,11 +70,12 @@ function Panel() {
             <label htmlFor="visor">👁️ Ver bandeja de:</label>
             <select
               id="visor"
-              value={usuarioVisto ? usuarioVisto.id : ""}
+              value={viendoTodos ? "todos" : usuarioVisto ? usuarioVisto.id : ""}
               onChange={(e) => setUsuarioVistoId(e.target.value || null)}
               style={{ flex: 1, padding: 8, borderRadius: 8 }}
             >
               <option value="">Mi bandeja</option>
+              <option value="todos">👥 Todos los usuarios</option>
               {usuarios.filter((u) => u.id !== usuario.id).map((u) => (
                 <option key={u.id} value={u.id}>{u.username}{u.activo ? "" : " (desactivado)"}</option>
               ))}
@@ -169,9 +172,11 @@ function Panel() {
       <hr />
 
       {/* Mirando la bandeja de otro usuario: solo lectura */}
-      {usuarioVisto && (
+      {(usuarioVisto || viendoTodos) && (
         <div style={{ background: '#fff8e1', border: '1px solid #ffe082', borderRadius: 8, padding: 10, marginBottom: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-          <span>👁️ Viendo la bandeja de <strong>{usuarioVisto.username}</strong> (solo lectura)</span>
+          <span>
+            👁️ Viendo {viendoTodos ? <strong>las bandejas de todos los usuarios</strong> : <>la bandeja de <strong>{usuarioVisto.username}</strong></>} (solo lectura)
+          </span>
           <button className="button-action-volver" style={{ float: 'none', margin: 0 }} onClick={() => setUsuarioVistoId(null)}>
             Volver a la mía
           </button>
@@ -180,9 +185,11 @@ function Panel() {
 
       {/* key: al cambiar de usuario se reinicia la bandeja y no se mezclan datos */}
       <BandejaEntrada
-        key={usuarioVisto ? usuarioVisto.id : "propia"}
-        usuarioVistoId={usuarioVisto ? usuarioVisto.id : null}
-        soloLectura={Boolean(usuarioVisto)}
+        key={viendoTodos ? "todos" : usuarioVisto ? usuarioVisto.id : "propia"}
+        usuarioVistoId={viendoTodos ? "todos" : usuarioVisto ? usuarioVisto.id : null}
+        soloLectura={viendoTodos || Boolean(usuarioVisto)}
+        esAdmin={esAdmin}
+        usuarios={usuarios}
       />
     </div>
   );

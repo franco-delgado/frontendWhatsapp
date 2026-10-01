@@ -1,0 +1,19 @@
+.usr-panel { text-align: left; }
+.usr-panel h3 { margin: 0 0 12px; }
+.usr-lista { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+.usr-card { background: #fff; border: 1px solid #ddd; border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.usr-inactivo { opacity: 0.6; }
+.usr-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.usr-badges { display: flex; gap: 6px; }
+.usr-badge { font-size: 12px; background: #e8f5e9; color: #2e7d32; border-radius: 999px; padding: 2px 8px; }
+.usr-rojo { background: #fef3f2; color: #b42318; }
+.usr-detalle { color: #666; }
+.usr-acciones { display: flex; gap: 8px; flex-wrap: wrap; }
+.usr-acciones button { padding: 6px 10px; border: 1px solid #ccc; border-radius: 6px; background: #fff; cursor: pointer; font-size: 13px; }
+.usr-acciones button:hover { background: #f0f0f0; }
+.usr-form { display: flex; flex-direction: column; gap: 8px; }
+.usr-form input[type='text'], .usr-form input[type='password'] { padding: 10px; font-size: 15px; border: 1px solid #ccc; border-radius: 8px; }
+.usr-nuevo { background: #fff; border: 1px solid #ddd; border-radius: 10px; padding: 12px; }
+.usr-check { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.usr-error { color: #b42318; background: #fef3f2; border: 1px solid #fecdca; border-radius: 8px; padding: 8px; margin: 0; font-size: 14px; }
+.usr-ok { color: #2e7d32; margin: 0; font-size: 14px; }

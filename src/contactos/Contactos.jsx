@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import "./Contactos.css";
 import useRespuestasContactos from "../hooks/useRespuestasContactos";
+import { claveContactos } from "../contactosStorage";
 
 const formatearFecha = (iso) =>
   iso
@@ -16,7 +17,7 @@ const formatearFecha = (iso) =>
 export default function Contactos() {
   // Estado para la lista de contactos
   const [contactos, setContactos] = useState(() => {
-    const guardados = localStorage.getItem("contactos_whatsapp");
+    const guardados = localStorage.getItem(claveContactos());
     return guardados ? JSON.parse(guardados) : [];
   });
 
@@ -53,7 +54,7 @@ export default function Contactos() {
 
   // Guardar automáticamente en localStorage
   useEffect(() => {
-    localStorage.setItem("contactos_whatsapp", JSON.stringify(contactos));
+    localStorage.setItem(claveContactos(), JSON.stringify(contactos));
   }, [contactos]);
 
   // Función para agregar un nuevo contacto

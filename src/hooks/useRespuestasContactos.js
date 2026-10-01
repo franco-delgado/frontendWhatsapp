@@ -2,9 +2,7 @@
 // Consulta los mensajes guardados en el backend y detecta, de forma automática,
 // qué contactos ya respondieron (es decir, tienen al menos un mensaje ENTRANTE).
 import { useState, useEffect, useCallback } from "react";
-
-const URL_BACKEND =
-  import.meta.env.VITE_API_URL || "https://backend-whatsapp-docker.onrender.com";
+import { apiFetch } from "../api";
 
 const INTERVALO_MS = 30000; // refresca cada 30 s
 
@@ -22,7 +20,7 @@ export default function useRespuestasContactos() {
 
   const cargar = useCallback(async () => {
     try {
-      const res = await fetch(`${URL_BACKEND}/api/mensajes`);
+      const res = await apiFetch("/api/mensajes");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       const lista = Array.isArray(json) ? json : json.data || [];

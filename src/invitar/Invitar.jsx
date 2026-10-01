@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { useEnviarWhatsApp } from "../hooks/useEnviarWhatsApp";
 import "./Invitar.css";
+import { claveContactos } from "../contactosStorage";
 
 export default function Invitar() {
   const [contactos, setContactos] = useState(() => {
-    const guardados = localStorage.getItem("contactos_whatsapp");
+    const guardados = localStorage.getItem(claveContactos());
     return guardados ? JSON.parse(guardados) : [];
   });
 

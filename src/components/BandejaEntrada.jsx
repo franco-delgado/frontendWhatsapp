@@ -2,8 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import "./bandejaEntrada.css";
 import { ContestarMensaje } from './contestarMensaje';
 import { BotonNotificaciones } from './BotonNotificaciones';
+import { apiFetch, API_URL } from '../api';
+import { claveContactos } from '../contactosStorage';
 
-export const BandejaEntrada = () => {
+export const BandejaEntrada = ({ usuarioVistoId = null, soloLectura = false }) => {
   const [mensajes, setMensajes] = useState([]);
   const [cargando, setCargando] = useState(true);
 
@@ -18,7 +20,10 @@ export const BandejaEntrada = () => {
   const [pausasIA, setPausasIA] = useState([]);
 
   // URL del servidor Express conectado a MongoDB
-  const URL_BACKEND = 'https://backend-whatsapp-docker.onrender.com';
+  const URL_BACKEND = API_URL;
+
+  // Si el administrador mira la bandeja de otro usuario, se pide con ?userId=
+  const qsUsuario = usuarioVistoId ? `?userId=${encodeURIComponent(usuarioVistoId)}` : '';
   
   // Estado para activar/desactivar la notificación sonora (persiste en localStorage)
   const [sonidoActivo, setSonidoActivo] = useState(() => {
@@ -83,7 +88,7 @@ export const BandejaEntrada = () => {
   // Función auxiliar para obtener el nombre agendado desde localStorage
   const obtenerNombreAgendado = (msg) => {
     try {
-      const contactosGuardados = JSON.parse(localStorage.getItem("contactos_whatsapp")) || [];
+      const contactosGuardados = JSON.parse(localStorage.getItem(claveContactos())) || [];
       const numeroLimpio = String(msg.from || "").replace(/\D/g, "");
 
       if (!numeroLimpio) return msg.nombre || msg.from;
@@ -129,7 +134,7 @@ export const BandejaEntrada = () => {
   // ---- Estado del bot de IA por contacto ----
   const obtenerPausasIA = async () => {
     try {
-      const response = await fetch(`${URL_BACKEND}/api/ia/pausas`);
+      const response = await apiFetch(`/api/ia/pausas${qsUsuario}`);
       if (!response.ok) return;
       const data = await response.json();
       if (data.success && Array.isArray(data.data)) {
@@ -155,7 +160,7 @@ export const BandejaEntrada = () => {
   const reactivarBot = async (numero) => {
     try {
       const k = String(numero || '').replace(/\D/g, '').slice(-10);
-      const response = await fetch(`${URL_BACKEND}/api/ia/pausas/${k}`, { method: 'DELETE' });
+      const response = await apiFetch(`/api/ia/pausas/${k}`, { method: 'DELETE' });
       if (!response.ok) throw new Error(`Código ${response.status}`);
       await obtenerPausasIA();
     } catch (error) {
@@ -168,7 +173,7 @@ export const BandejaEntrada = () => {
   const obtenerMensajes = async () => {
     obtenerPausasIA(); // se refresca junto con los mensajes
     try {
-      const response = await fetch(`${URL_BACKEND}/api/mensajes`);
+      const response = await apiFetch(`/api/mensajes${qsUsuario}`);
 
       // Validación estricta para respuestas de error (como HTTP 500)
       if (!response.ok) {
@@ -262,7 +267,7 @@ export const BandejaEntrada = () => {
     }
 
     try {
-      const response = await fetch(`${URL_BACKEND}/api/mensajes/${idMensaje}`, {
+      const response = await apiFetch(`/api/mensajes/${idMensaje}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json'
@@ -306,7 +311,7 @@ export const BandejaEntrada = () => {
     try {
       await Promise.all(
         idsAEliminar.map((id) =>
-          fetch(`${URL_BACKEND}/api/mensajes/${id}`, { method: 'DELETE' })
+          apiFetch(`/api/mensajes/${id}`, { method: 'DELETE' })
         )
       );
       setMensajes((prev) => prev.filter((m) => m.from !== from));
@@ -319,12 +324,12 @@ export const BandejaEntrada = () => {
 
   // Limpiar todo el historial de la base de datos
   const limpiarMensajes = async () => {
-    if (!window.confirm("¿Estás seguro de que deseas borrar todo el historial de mensajes en MongoDB?")) {
+    if (!window.confirm("¿Estás seguro de que deseas borrar TODO tu historial de mensajes?")) {
       return;
     }
 
     try {
-      const response = await fetch(`${URL_BACKEND}/api/mensajes`, {
+      const response = await apiFetch('/api/mensajes', {
         method: 'DELETE',
       });
       const data = await response.json();
@@ -439,12 +444,14 @@ export const BandejaEntrada = () => {
 
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
           {/* Aviso push con la app cerrada (sonido del sistema) */}
-          <BotonNotificaciones />
+          {!soloLectura && <BotonNotificaciones />}
 
 
-          <button onClick={limpiarMensajes} className="btn-vaciar">
-            Vaciar Todo
-          </button>
+          {!soloLectura && (
+            <button onClick={limpiarMensajes} className="btn-vaciar">
+              Vaciar Todo
+            </button>
+          )}
         </div>
       </div>
 
@@ -541,7 +548,7 @@ export const BandejaEntrada = () => {
               ←
             </button>
             <strong style={{ flex: 1 }}>👤 {nombreContactoActivo} ({contactoActivo})</strong>
-            {pausaDeContacto(contactoActivo) && (
+            {!soloLectura && pausaDeContacto(contactoActivo) && (
               <span style={{ fontSize: '13px', color: '#b26a00', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 ⏸️ Bot pausado hasta las {pausaDeContacto(contactoActivo).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 <button
@@ -553,7 +560,7 @@ export const BandejaEntrada = () => {
                 </button>
               </span>
             )}
-            <button
+            {!soloLectura && <button
               onClick={() => eliminarConversacion(contactoActivo)}
               title="Eliminar toda la conversación"
               style={{
@@ -565,7 +572,7 @@ export const BandejaEntrada = () => {
               }}
             >
               🗑️ Eliminar conversación
-            </button>
+            </button>}
           </div>
 
           <div
@@ -588,7 +595,7 @@ export const BandejaEntrada = () => {
                 <div
                   key={idMensaje}
                   className={`message-card ${isSelected ? 'selected' : ''}`}
-                  onClick={() => setMensajeSeleccionado(msg)}
+                  onClick={() => { if (!soloLectura) setMensajeSeleccionado(msg); }}
                   style={{
                     cursor: 'pointer',
                     position: 'relative',
@@ -611,7 +618,7 @@ export const BandejaEntrada = () => {
                       )}
                     </small>
 
-                    <button
+                    {!soloLectura && <button
                       onClick={(e) => eliminarMensajeIndividual(e, idMensaje)}
                       title="Eliminar mensaje"
                       style={{
@@ -624,7 +631,7 @@ export const BandejaEntrada = () => {
                       }}
                     >
                       🗑️
-                    </button>
+                    </button>}
                   </div>
 
                   <div className="message-body" style={{ marginTop: '8px' }}>

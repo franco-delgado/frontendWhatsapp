@@ -1,8 +1,6 @@
 // Activa/desactiva las notificaciones push de este dispositivo.
 import { useState, useEffect, useCallback } from 'react';
-
-const API_URL =
-  import.meta.env.VITE_API_URL || 'https://backend-whatsapp-docker.onrender.com';
+import { apiFetch, API_URL } from '../api';
 
 // La clave pública VAPID viene en base64url; pushManager la necesita en bytes.
 function urlBase64ToUint8Array(base64) {
@@ -13,9 +11,8 @@ function urlBase64ToUint8Array(base64) {
 }
 
 async function postJSON(ruta, cuerpo) {
-  const res = await fetch(`${API_URL}${ruta}`, {
+  const res = await apiFetch(ruta, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(cuerpo),
   });
   const data = await res.json().catch(() => ({}));

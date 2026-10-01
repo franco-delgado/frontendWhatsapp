@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './bandejaEntrada.css';
+import { apiFetch } from '../api';
 
 export const ContestarMensaje = ({ mensajeSeleccionado, alCerrar, alEnviarExitoso }) => {
   const [textoRespuesta, setTextoRespuesta] = useState('');
@@ -28,7 +29,7 @@ export const ContestarMensaje = ({ mensajeSeleccionado, alCerrar, alEnviarExitos
     setError(null);
 
     try {
-      const response = await fetch('https://backend-whatsapp-docker.onrender.com/api/mensajes/responder', {
+      const response = await apiFetch('/api/mensajes/responder', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

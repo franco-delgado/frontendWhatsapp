@@ -1,16 +1,45 @@
 // src/App.jsx
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Invitar from "./invitar/Invitar.jsx";
 import Contactos from "./contactos/Contactos.jsx";
 import Cobrar from "./cobrar/Cobrar";
+import Login from "./login/Login.jsx";
+import Usuarios from "./admin/Usuarios.jsx";
 import { BandejaEntrada } from './components/BandejaEntrada';
+import { CambiarPassword } from './components/CambiarPassword.jsx';
+import { useAuth } from "./AuthContext.jsx";
+import { apiFetch } from "./api.js";
 import "./App.css";
 import { BotonInstalar } from './components/BotonInstalar.jsx';
 
-function App() {
+function Panel() {
+  const { usuario, logout } = useAuth();
+  const esAdmin = usuario.role === "admin";
+
   // Estado para controlar qué sección está activa en pantalla
-  // Valores posibles: "inicio", "cobrar", "invitar", "contactos"
+  // Valores posibles: "inicio", "cobrar", "invitar", "contactos", "usuarios", "clave"
   const [seccionActiva, setSeccionActiva] = useState("inicio");
+
+  // Solo administrador: lista de usuarios y cuál bandeja se está mirando.
+  const [usuarios, setUsuarios] = useState([]);
+  const [usuarioVistoId, setUsuarioVistoId] = useState(null);
+
+  const recargarUsuarios = useCallback(async () => {
+    if (!esAdmin) return;
+    try {
+      const res = await apiFetch("/api/admin/usuarios");
+      const data = await res.json();
+      if (data.success) setUsuarios(data.data);
+    } catch (e) {
+      console.error("No se pudo cargar la lista de usuarios:", e);
+    }
+  }, [esAdmin]);
+
+  useEffect(() => {
+    recargarUsuarios();
+  }, [recargarUsuarios]);
+
+  const usuarioVisto = esAdmin ? usuarios.find((u) => u.id === usuarioVistoId) || null : null;
 
   return (
     <div className="container">
@@ -21,7 +50,35 @@ function App() {
           <BotonInstalar />
         </header>
 
-        {/* Resto de tus módulos (BandejaEntrada, Cobrar, Contactos, etc.) */}
+        {/* Quién está conectado */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, padding: '0 15px 10px', flexWrap: 'wrap' }}>
+          <span>
+            {esAdmin ? '👑' : '👤'} <strong>{usuario.username}</strong>
+            {esAdmin && <small style={{ color: '#666' }}> (administrador)</small>}
+          </span>
+          <span style={{ display: 'flex', gap: 6 }}>
+            <button className="button-action-volver" style={{ float: 'none', margin: 0 }} onClick={() => setSeccionActiva("clave")}>🔑 Clave</button>
+            <button className="button-action-volver" style={{ float: 'none', margin: 0 }} onClick={logout}>Salir</button>
+          </span>
+        </div>
+
+        {/* Solo administrador: elegir de quién ver la bandeja */}
+        {esAdmin && usuarios.length > 1 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 15px 10px' }}>
+            <label htmlFor="visor">👁️ Ver bandeja de:</label>
+            <select
+              id="visor"
+              value={usuarioVisto ? usuarioVisto.id : ""}
+              onChange={(e) => setUsuarioVistoId(e.target.value || null)}
+              style={{ flex: 1, padding: 8, borderRadius: 8 }}
+            >
+              <option value="">Mi bandeja</option>
+              {usuarios.filter((u) => u.id !== usuario.id).map((u) => (
+                <option key={u.id} value={u.id}>{u.username}{u.activo ? "" : " (desactivado)"}</option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       {/* BOTÓN VOLVER ATRÁS (Solo se muestra si NO estás en el inicio) */}
@@ -56,10 +113,29 @@ function App() {
         </div>
       )}
 
+      {seccionActiva === "clave" && (
+        <div>
+          <CambiarPassword />
+        </div>
+      )}
+
+      {esAdmin && seccionActiva === "usuarios" && (
+        <div>
+          <Usuarios
+            usuarios={usuarios}
+            recargar={recargarUsuarios}
+            onVer={(id) => {
+              setUsuarioVistoId(id);
+              setSeccionActiva("inicio");
+            }}
+          />
+        </div>
+      )}
+
       <hr className="divider" />
 
       {/* SECCIÓN DE BOTONES DE NAVEGACIÓN */}
-      <div className="actions-section">
+      <div className="actions-section" style={{ flexWrap: 'wrap' }}>
         <button
           onClick={() => setSeccionActiva("cobrar")}
           className={`button-action ${seccionActiva === "cobrar" ? "active" : ""}`}
@@ -80,11 +156,42 @@ function App() {
         >
           👤 Contactos
         </button>
+
+        {esAdmin && (
+          <button
+            onClick={() => setSeccionActiva("usuarios")}
+            className={`button-action ${seccionActiva === "usuarios" ? "active" : ""}`}
+          >
+            👥 Usuarios
+          </button>
+        )}
       </div>
       <hr />
-      <BandejaEntrada />
+
+      {/* Mirando la bandeja de otro usuario: solo lectura */}
+      {usuarioVisto && (
+        <div style={{ background: '#fff8e1', border: '1px solid #ffe082', borderRadius: 8, padding: 10, marginBottom: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+          <span>👁️ Viendo la bandeja de <strong>{usuarioVisto.username}</strong> (solo lectura)</span>
+          <button className="button-action-volver" style={{ float: 'none', margin: 0 }} onClick={() => setUsuarioVistoId(null)}>
+            Volver a la mía
+          </button>
+        </div>
+      )}
+
+      {/* key: al cambiar de usuario se reinicia la bandeja y no se mezclan datos */}
+      <BandejaEntrada
+        key={usuarioVisto ? usuarioVisto.id : "propia"}
+        usuarioVistoId={usuarioVisto ? usuarioVisto.id : null}
+        soloLectura={Boolean(usuarioVisto)}
+      />
     </div>
   );
+}
+
+function App() {
+  const { usuario } = useAuth();
+  // key por usuario: si sale uno y entra otro, nada del estado anterior sobrevive.
+  return usuario ? <Panel key={usuario.id} /> : <Login />;
 }
 
 export default App;

@@ -67,8 +67,15 @@ export function AuthProvider({ children }) {
     if (s) guardarSesion({ ...s, token });
   }, []);
 
+  // Actualiza los datos del usuario en pantalla y en la sesión guardada (ej: tras encender el bot).
+  const actualizarUsuario = useCallback((nuevo) => {
+    const s = leerSesion();
+    if (s) guardarSesion({ ...s, usuario: nuevo });
+    setUsuario(nuevo);
+  }, []);
+
   return (
-    <AuthCtx.Provider value={{ usuario, login, logout, actualizarToken }}>
+    <AuthCtx.Provider value={{ usuario, login, logout, actualizarToken, actualizarUsuario }}>
       {children}
     </AuthCtx.Provider>
   );

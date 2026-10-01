@@ -7,6 +7,7 @@ import Login from "./login/Login.jsx";
 import Usuarios from "./admin/Usuarios.jsx";
 import { BandejaEntrada } from './components/BandejaEntrada';
 import { CambiarPassword } from './components/CambiarPassword.jsx';
+import { BotIA } from './components/BotIA.jsx';
 import { useAuth } from "./AuthContext.jsx";
 import { apiFetch } from "./api.js";
 import "./App.css";
@@ -63,6 +64,9 @@ function Panel() {
             <button className="button-action-volver" style={{ float: 'none', margin: 0 }} onClick={logout}>Salir</button>
           </span>
         </div>
+
+        {/* Interruptor del bot de IA (cada usuario controla el suyo) */}
+        <BotIA />
 
         {/* Solo administrador: elegir de quién ver la bandeja */}
         {esAdmin && usuarios.length > 1 && (

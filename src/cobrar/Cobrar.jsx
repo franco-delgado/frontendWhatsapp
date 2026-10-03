@@ -1,13 +1,12 @@
 import { useState, useEffect } from "react";
 import { useEnviarWhatsApp } from "../hooks/useEnviarWhatsApp";
 import "./Cobrar.css";
-import { claveContactos } from "../contactosStorage";
+import useAgenda from "../hooks/useAgenda";
 
 export default function Cobrar() {
-  const [contactos, setContactos] = useState(() => {
-    const guardados = localStorage.getItem(claveContactos());
-    return guardados ? JSON.parse(guardados) : [];
-  });
+  // La agenda viene del servidor. El apellido y el DNI no se usan acá: la plantilla
+  // solo lleva nombre y monto.
+  const { contactos, error: errorAgenda } = useAgenda();
 
   const [seleccionados, setSeleccionados] = useState([]);
   
@@ -188,7 +187,7 @@ export default function Cobrar() {
                 onChange={() => manejarSeleccion(usuario.id)}
               />
               <div className="usuario-info">
-                <strong>{usuario.nombre}</strong> ({usuario.numero})
+                <strong>{`${usuario.nombre} ${usuario.apellido || ""}`.trim()}</strong> ({usuario.numero})
                 {usuario.monto > 0 && (
                   <span
                     style={{
@@ -205,7 +204,12 @@ export default function Cobrar() {
             </div>
           ))}
 
-          {contactos.length === 0 && (
+          {errorAgenda && (
+            <p style={{ color: "#d9534f", fontSize: "13px" }}>
+              ⚠️ No se pudo cargar la agenda: {errorAgenda}
+            </p>
+          )}
+          {contactos.length === 0 && !errorAgenda && (
             <p
               style={{
                 fontSize: "14px",

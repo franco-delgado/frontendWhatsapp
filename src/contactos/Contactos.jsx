@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import "./Contactos.css";
 import useRespuestasContactos from "../hooks/useRespuestasContactos";
-import { claveContactos } from "../contactosStorage";
+import useAgenda from "../hooks/useAgenda";
 
 const formatearFecha = (iso) =>
   iso
@@ -14,24 +14,19 @@ const formatearFecha = (iso) =>
       })
     : "";
 
+const soloDigitos = (v) => String(v ?? "").replace(/\D/g, "");
+const nombreCompleto = (c) => `${c.nombre} ${c.apellido || ""}`.trim();
+
+// Quita tildes y pasa a minúsculas para que la búsqueda no distinga "María" de "maria".
+const normalizar = (t) =>
+  String(t ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+
 export default function Contactos() {
-  // Estado para la lista de contactos
-  const [contactos, setContactos] = useState(() => {
-    const guardados = localStorage.getItem(claveContactos());
-    return guardados ? JSON.parse(guardados) : [];
-  });
-
-  // Limpieza automática de contactos viejos guardados en localStorage con símbolos (+, -, espacios)
-  useEffect(() => {
-    const contactosLimpios = contactos.map((c) => ({
-      ...c,
-      numero: String(c.numero).replace(/\D/g, ""),
-    }));
-
-    if (JSON.stringify(contactosLimpios) !== JSON.stringify(contactos)) {
-      setContactos(contactosLimpios);
-    }
-  }, []);
+  // La agenda vive en el servidor (así el bot también puede consultar el DNI y el monto).
+  const { contactos, cargando, error, crear, actualizar, eliminar } = useAgenda();
 
   // Respuestas automáticas (según los mensajes entrantes del backend)
   const { obtenerRespuesta, cargando: cargandoRespuestas, error: errorRespuestas } =
@@ -40,106 +35,109 @@ export default function Contactos() {
   // Filtros
   const [filtroRespuesta, setFiltroRespuesta] = useState("todos"); // todos | respondieron | sinRespuesta
   const [filtroAlta, setFiltroAlta] = useState("todos"); // todos | conAlta | sinAlta
+  const [busqueda, setBusqueda] = useState("");
 
   // Estados para el formulario de creación
   const [nombre, setNombre] = useState("");
+  const [apellido, setApellido] = useState("");
+  const [dni, setDni] = useState("");
   const [numero, setNumero] = useState("");
   const [monto, setMonto] = useState("");
 
   // ESTADOS PARA LA EDICIÓN
   const [idEditando, setIdEditando] = useState(null);
   const [nombreEditado, setNombreEditado] = useState("");
+  const [apellidoEditado, setApellidoEditado] = useState("");
+  const [dniEditado, setDniEditado] = useState("");
   const [numeroEditado, setNumeroEditado] = useState("");
   const [montoEditado, setMontoEditado] = useState("");
 
-  // Guardar automáticamente en localStorage
-  useEffect(() => {
-    localStorage.setItem(claveContactos(), JSON.stringify(contactos));
-  }, [contactos]);
+  // El DNI se valida igual que en el servidor: solo números, entre 6 y 8 dígitos (o vacío).
+  const dniInvalido = (d) => d !== "" && (d.length < 6 || d.length > 8);
 
   // Función para agregar un nuevo contacto
-  const handleAgregar = (e) => {
+  const handleAgregar = async (e) => {
     e.preventDefault();
-    if (!nombre || !numero || !monto) {
-      alert("Por favor, rellena todos los campos");
+    if (!nombre.trim() || !numero || monto === "") {
+      alert("Completá al menos nombre, número y monto.");
+      return;
+    }
+    const dniLimpio = soloDigitos(dni);
+    if (dniInvalido(dniLimpio)) {
+      alert("El DNI debe tener entre 6 y 8 números, sin puntos ni comas.");
       return;
     }
 
-    // Deja ÚNICAMENTE dígitos numéricos
-    const numeroLimpio = numero.replace(/\D/g, "");
-
-    const nuevoContacto = {
-      id: Date.now(),
-      nombre,
-      numero: numeroLimpio,
-      monto: parseFloat(monto),
-      alta: false,
-      fechaAlta: null,
-    };
-
-    setContactos([...contactos, nuevoContacto]);
-    setNombre("");
-    setNumero("");
-    setMonto("");
+    try {
+      await crear({
+        nombre: nombre.trim(),
+        apellido: apellido.trim(),
+        dni: dniLimpio,
+        numero: soloDigitos(numero), // ÚNICAMENTE dígitos numéricos
+        monto: parseFloat(monto),
+      });
+      setNombre("");
+      setApellido("");
+      setDni("");
+      setNumero("");
+      setMonto("");
+    } catch (err) {
+      alert(err.message);
+    }
   };
 
   // Función para activar el modo edición cargando los datos actuales del contacto
   const activarEdicion = (contacto) => {
     setIdEditando(contacto.id);
     setNombreEditado(contacto.nombre);
+    setApellidoEditado(contacto.apellido || "");
+    setDniEditado(contacto.dni || "");
     setNumeroEditado(contacto.numero);
     setMontoEditado(contacto.monto);
   };
 
   // Función para guardar los cambios editados
-  const handleGuardarEdicion = (id) => {
-    if (!nombreEditado || !numeroEditado || !montoEditado) {
-      alert("Los campos editados no pueden estar vacíos");
+  const handleGuardarEdicion = async (id) => {
+    if (!nombreEditado.trim() || !numeroEditado || montoEditado === "") {
+      alert("Nombre, número y monto no pueden quedar vacíos.");
+      return;
+    }
+    const dniLimpio = soloDigitos(dniEditado);
+    if (dniInvalido(dniLimpio)) {
+      alert("El DNI debe tener entre 6 y 8 números, sin puntos ni comas.");
       return;
     }
 
-    // Deja ÚNICAMENTE dígitos numéricos
-    const numeroLimpio = numeroEditado.replace(/\D/g, "");
-
-    const contactosActualizados = contactos.map((c) => {
-      if (c.id === id) {
-        return {
-          ...c,
-          nombre: nombreEditado,
-          numero: numeroLimpio,
-          monto: parseFloat(montoEditado),
-        };
-      }
-      return c;
-    });
-
-    setContactos(contactosActualizados);
-    setIdEditando(null); // Cierra el modo edición
+    try {
+      await actualizar(id, {
+        nombre: nombreEditado.trim(),
+        apellido: apellidoEditado.trim(),
+        dni: dniLimpio,
+        numero: soloDigitos(numeroEditado),
+        monto: parseFloat(montoEditado),
+      });
+      setIdEditando(null); // Cierra el modo edición
+    } catch (err) {
+      alert(err.message);
+    }
   };
 
-  // Botón de alta: alterna entre "dada de alta" y "sin alta" y guarda la fecha
-  const toggleAlta = (id) => {
-    setContactos(
-      contactos.map((c) =>
-        c.id === id
-          ? {
-              ...c,
-              alta: !c.alta,
-              fechaAlta: !c.alta ? new Date().toISOString() : null,
-            }
-          : c
-      )
-    );
+  // Botón de alta: alterna entre "dada de alta" y "sin alta" (el servidor guarda la fecha)
+  const toggleAlta = async (c) => {
+    try {
+      await actualizar(c.id, { alta: !c.alta });
+    } catch (err) {
+      alert(err.message);
+    }
   };
 
   // Función para eliminar un contacto
-  const handleEliminar = (id) => {
-    const confirmar = window.confirm(
-      "¿Estás seguro de que deseas eliminar este contacto?"
-    );
-    if (confirmar) {
-      const filtrados = contactos.filter((c) => c.id !== id);
-      setContactos(filtrados);
+  const handleEliminar = async (id) => {
+    if (!window.confirm("¿Estás seguro de que deseas eliminar este contacto?")) return;
+    try {
+      await eliminar(id);
+    } catch (err) {
+      alert(err.message);
     }
   };
 
@@ -147,7 +145,9 @@ export default function Contactos() {
   const totalRespondieron = contactos.filter((c) => obtenerRespuesta(c.numero)).length;
   const totalConAlta = contactos.filter((c) => c.alta).length;
 
+  const q = normalizar(busqueda.trim());
   const contactosFiltrados = contactos.filter((c) => {
+    if (q && !normalizar(`${nombreCompleto(c)} ${c.dni} ${c.numero}`).includes(q)) return false;
     const respondio = Boolean(obtenerRespuesta(c.numero));
     if (filtroRespuesta === "respondieron" && !respondio) return false;
     if (filtroRespuesta === "sinRespuesta" && respondio) return false;
@@ -156,7 +156,7 @@ export default function Contactos() {
     return true;
   });
 
-  const hayFiltros = filtroRespuesta !== "todos" || filtroAlta !== "todos";
+  const hayFiltros = filtroRespuesta !== "todos" || filtroAlta !== "todos" || q !== "";
 
   return (
     <div className="contactos-container">
@@ -166,9 +166,24 @@ export default function Contactos() {
       <form onSubmit={handleAgregar} className="contactos-form">
         <input
           type="text"
-          placeholder="Nombre del contacto"
+          placeholder="Nombre"
           value={nombre}
           onChange={(e) => setNombre(e.target.value)}
+          className="form-input"
+        />
+        <input
+          type="text"
+          placeholder="Apellido"
+          value={apellido}
+          onChange={(e) => setApellido(e.target.value)}
+          className="form-input"
+        />
+        <input
+          type="text"
+          inputMode="numeric"
+          placeholder="DNI (sin puntos ni comas)"
+          value={dni}
+          onChange={(e) => setDni(soloDigitos(e.target.value).slice(0, 8))}
           className="form-input"
         />
         <input
@@ -185,6 +200,10 @@ export default function Contactos() {
           onChange={(e) => setMonto(e.target.value)}
           className="form-input"
         />
+        <small className="filtro-aviso">
+          El apellido y el DNI son solo para identificar al cliente: no se envían en el mensaje de
+          la plantilla. El DNI lo usa el bot para informar cuánto debe cada cliente.
+        </small>
         <button type="submit" className="btn-guardar">
           Guardar Contacto
         </button>
@@ -196,8 +215,22 @@ export default function Contactos() {
         {contactos.length})
       </h3>
 
+      {error && (
+        <small className="filtro-aviso">
+          ⚠️ No se pudo cargar la agenda desde el servidor: {error}
+        </small>
+      )}
+      {cargando && !error && <small className="filtro-aviso">Cargando contactos…</small>}
+
       {/* Filtros */}
       <div className="filtros">
+        <input
+          type="search"
+          className="form-input"
+          placeholder="Buscar por nombre, apellido, DNI o teléfono"
+          value={busqueda}
+          onChange={(e) => setBusqueda(e.target.value)}
+        />
         <div className="filtro-grupo">
           <span className="filtro-label">¿Respondió?</span>
           <div className="filtro-chips">
@@ -257,8 +290,24 @@ export default function Contactos() {
                 <div className="edit-inputs">
                   <input
                     type="text"
+                    placeholder="Nombre"
                     value={nombreEditado}
                     onChange={(e) => setNombreEditado(e.target.value)}
+                    className="form-input"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Apellido"
+                    value={apellidoEditado}
+                    onChange={(e) => setApellidoEditado(e.target.value)}
+                    className="form-input"
+                  />
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="DNI"
+                    value={dniEditado}
+                    onChange={(e) => setDniEditado(soloDigitos(e.target.value).slice(0, 8))}
                     className="form-input"
                   />
                   <input
@@ -293,10 +342,20 @@ export default function Contactos() {
               /* VISTA NORMAL DEL CONTACTO */
               <li className="contacto-item">
                 <div className="contacto-info">
-                  <strong>{c.nombre}</strong>
-                  <span className="contacto-tel">Tel: {c.numero}</span>
+                  <strong>{nombreCompleto(c)}</strong>
+                  <span className="contacto-tel">
+                    {c.dni ? `DNI: ${c.dni} · ` : ""}Tel: {c.numero}
+                  </span>
                   <span className="contacto-monto">Deuda: ${c.monto}</span>
                   <div className="contacto-badges">
+                    {!c.dni && (
+                      <span
+                        className="badge badge-sin-alta"
+                        title="Sin DNI el bot no puede informarle su saldo"
+                      >
+                        ⚠️ Sin DNI
+                      </span>
+                    )}
                     {(() => {
                       const r = obtenerRespuesta(c.numero);
                       return r ? (
@@ -327,7 +386,7 @@ export default function Contactos() {
                     📱 Mensaje
                   </button>*/}
                   <button
-                    onClick={() => toggleAlta(c.id)}
+                    onClick={() => toggleAlta(c)}
                     className={c.alta ? "btn-alta btn-alta-quitar" : "btn-alta"}
                   >
                     {c.alta ? "Quitar alta" : "Dar de alta"}

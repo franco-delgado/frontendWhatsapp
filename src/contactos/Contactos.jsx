@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import "./Contactos.css";
 import useRespuestasContactos from "../hooks/useRespuestasContactos";
 import useAgenda from "../hooks/useAgenda";
+import ImportarExcel from "./ImportarExcel";
 
 const formatearFecha = (iso) =>
   iso
@@ -26,7 +27,7 @@ const normalizar = (t) =>
 
 export default function Contactos() {
   // La agenda vive en el servidor (así el bot también puede consultar el DNI y el monto).
-  const { contactos, cargando, error, crear, actualizar, eliminar } = useAgenda();
+  const { contactos, cargando, error, crear, actualizar, eliminar, importarExcel } = useAgenda();
 
   // Respuestas automáticas (según los mensajes entrantes del backend)
   const { obtenerRespuesta, cargando: cargandoRespuestas, error: errorRespuestas } =
@@ -208,6 +209,9 @@ export default function Contactos() {
           Guardar Contacto
         </button>
       </form>
+
+      {/* Carga masiva desde Excel */}
+      <ImportarExcel importar={importarExcel} />
 
       {/* Lista de Contactos */}
       <h3 className="lista-titulo">

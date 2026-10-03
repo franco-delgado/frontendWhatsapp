@@ -85,5 +85,17 @@ export default function useAgenda() {
     setContactos((prev) => prev.filter((c) => c.id !== id));
   };
 
-  return { contactos, cargando, error, recargar, crear, actualizar, eliminar };
+  // Carga masiva desde Excel. Devuelve { importados, omitidos, errores: [{ fila, motivo }] }.
+  const importarExcel = async (filas) => {
+    const data = await leer(
+      await apiFetch("/api/clientes/importar-excel", {
+        method: "POST",
+        body: JSON.stringify({ filas }),
+      })
+    );
+    await recargar();
+    return data;
+  };
+
+  return { contactos, cargando, error, recargar, crear, actualizar, eliminar, importarExcel };
 }

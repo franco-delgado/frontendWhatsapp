@@ -290,3 +290,12 @@
 .contacto-acciones {
   flex-wrap: wrap;
 }
+
+/* ---- Carga masiva desde Excel ---- */
+.importar-excel { margin-bottom: 24px; }
+.importar-panel { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; padding: 12px; border: 1px solid #ddd; border-radius: 6px; background: #fafafa; }
+.importar-preview { display: flex; flex-direction: column; gap: 8px; }
+.importar-preview p { margin: 0; }
+.importar-errores { margin: 0; padding-left: 18px; max-height: 180px; overflow-y: auto; font-size: 13px; color: #b00020; }
+.importar-error { color: #b00020; }
+.importar-botones { display: flex; gap: 8px; }

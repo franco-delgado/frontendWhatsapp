@@ -1,0 +1,69 @@
+/* Interruptor del bot de IA (vive en la cabecera verde) */
+.bot-ia {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 6px 5px 12px;
+  background: #fff;
+  color: #333;
+  border-radius: 999px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.bot-ia-estado {
+  color: #667781;
+}
+.bot-ia-estado.on {
+  color: #1a8f4a;
+  font-weight: bold;
+}
+.bot-ia-switch {
+  position: relative;
+  width: 42px;
+  height: 24px;
+  padding: 0;
+  border-radius: 999px;
+  background: #b8c0c4;
+  transition: background 0.2s;
+}
+.bot-ia-switch.on {
+  background: #25d366;
+}
+.bot-ia-switch:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.bot-ia-bolita {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s;
+}
+.bot-ia-switch.on .bot-ia-bolita {
+  transform: translateX(18px);
+}
+.bot-ia-error {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 20;
+  max-width: 260px;
+  white-space: normal;
+  color: #b42318;
+  background: #fef3f2;
+  border: 1px solid #fecdca;
+  border-radius: 8px;
+  padding: 6px 8px;
+}
+@media (max-width: 899px) {
+  .bot-ia {
+    font-size: 12px;
+    padding-left: 10px;
+  }
+}

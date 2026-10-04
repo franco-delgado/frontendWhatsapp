@@ -17,9 +17,11 @@ function Panel() {
   const { usuario, logout } = useAuth();
   const esAdmin = usuario.role === "admin";
 
-  // Estado para controlar qué sección está activa en pantalla
-  // Valores posibles: "inicio", "cobrar", "invitar", "contactos", "usuarios", "clave"
+  // Sección activa: "inicio" (chats), "cobrar", "invitar", "contactos", "usuarios", "clave"
   const [seccionActiva, setSeccionActiva] = useState("inicio");
+
+  // Lo informa la bandeja: en el celular, con un chat abierto se oculta el resto del menú.
+  const [chatAbierto, setChatAbierto] = useState(false);
 
   // Solo administrador: lista de usuarios y cuál bandeja se está mirando.
   const [usuarios, setUsuarios] = useState([]);
@@ -44,157 +46,127 @@ function Panel() {
   const viendoTodos = esAdmin && usuarioVistoId === "todos";
   const usuarioVisto = esAdmin ? usuarios.find((u) => u.id === usuarioVistoId) || null : null;
 
-  return (
-    <div className="container">
-      <div className="app-container">
-        <header style={{ display: 'flex', justifyContent: 'space-between', padding: '15px' }}>
-          <h1>Exclusivo Para cuenta</h1>
-          {/* Renderiza el botón aquí */}
-          <BotonInstalar />
-        </header>
+  const pestanas = [
+    { id: "inicio", icono: "💬", texto: "Chats" },
+    { id: "cobrar", icono: "💰", texto: "Cobrar" },
+    { id: "invitar", icono: "📩", texto: "Invitar" },
+    { id: "contactos", icono: "👤", texto: "Contactos" },
+    ...(esAdmin ? [{ id: "usuarios", icono: "👥", texto: "Usuarios" }] : []),
+  ];
 
-        {/* Quién está conectado */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, padding: '0 15px 10px', flexWrap: 'wrap' }}>
-          <span>
-            {esAdmin ? '👑' : '👤'} <strong>{usuario.username}</strong>
-            {esAdmin && <small style={{ color: '#666' }}> (administrador)</small>}
-          </span>
-          <span style={{ display: 'flex', gap: 6 }}>
-            <button className="button-action-volver" style={{ float: 'none', margin: 0 }} onClick={() => setSeccionActiva("clave")}>🔑 Clave</button>
-            <button className="button-action-volver" style={{ float: 'none', margin: 0 }} onClick={logout}>Salir</button>
-          </span>
+  const enInicio = seccionActiva === "inicio";
+
+  return (
+    <div className={`app-shell ${chatAbierto && enInicio ? "chat-abierto" : ""}`}>
+      <header className="app-header">
+        <div className="app-brand">
+          <span>💬</span>
+          <span>Panel WhatsApp</span>
         </div>
 
-        {/* Interruptor del bot de IA (cada usuario controla el suyo) */}
-        <BotIA />
-
-        {/* Solo administrador: elegir de quién ver la bandeja */}
-        {esAdmin && usuarios.length > 1 && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 15px 10px' }}>
-            <label htmlFor="visor">👁️ Ver bandeja de:</label>
-            <select
-              id="visor"
-              value={viendoTodos ? "todos" : usuarioVisto ? usuarioVisto.id : ""}
-              onChange={(e) => setUsuarioVistoId(e.target.value || null)}
-              style={{ flex: 1, padding: 8, borderRadius: 8 }}
+        {/* Pestañas: solo en pantallas anchas */}
+        <nav className="app-tabs">
+          {pestanas.map((p) => (
+            <button
+              key={p.id}
+              onClick={() => setSeccionActiva(p.id)}
+              className={`app-tab ${seccionActiva === p.id ? "activo" : ""}`}
             >
-              <option value="">Mi bandeja</option>
-              <option value="todos">👥 Todos los usuarios</option>
-              {usuarios.filter((u) => u.id !== usuario.id).map((u) => (
-                <option key={u.id} value={u.id}>{u.username}{u.activo ? "" : " (desactivado)"}</option>
-              ))}
-            </select>
+              <span>{p.icono}</span> {p.texto}
+            </button>
+          ))}
+        </nav>
+
+        <div className="app-actions">
+          <BotIA />
+          <BotonInstalar />
+          <span className="app-user" title={esAdmin ? "Administrador" : "Usuario"}>
+            {esAdmin ? "👑" : "👤"}
+            <strong className="app-user-nombre">{usuario.username}</strong>
+            {esAdmin && <small>(administrador)</small>}
+          </span>
+          <button className="app-hbtn" onClick={() => setSeccionActiva("clave")}>🔑 Clave</button>
+          <button className="app-hbtn" onClick={logout}>Salir</button>
+        </div>
+      </header>
+
+      {/* Solo administrador: elegir de quién ver la bandeja */}
+      {esAdmin && usuarios.length > 1 && (
+        <div className="app-toolbar">
+          <label htmlFor="visor">👁️ Ver bandeja de:</label>
+          <select
+            id="visor"
+            value={viendoTodos ? "todos" : usuarioVisto ? usuarioVisto.id : ""}
+            onChange={(e) => setUsuarioVistoId(e.target.value || null)}
+          >
+            <option value="">Mi bandeja</option>
+            <option value="todos">👥 Todos los usuarios</option>
+            {usuarios.filter((u) => u.id !== usuario.id).map((u) => (
+              <option key={u.id} value={u.id}>{u.username}{u.activo ? "" : " (desactivado)"}</option>
+            ))}
+          </select>
+
+          {/* Mirando la bandeja de otro usuario: solo lectura */}
+          {(usuarioVisto || viendoTodos) && (
+            <span className="solo-lectura">
+              Viendo {viendoTodos ? <strong>las bandejas de todos</strong> : <>la bandeja de <strong>{usuarioVisto.username}</strong></>} (solo lectura)
+              <button onClick={() => setUsuarioVistoId(null)}>Volver a la mía</button>
+            </span>
+          )}
+        </div>
+      )}
+
+      <main className="app-main">
+        {/* Secciones: reemplazan a la bandeja mientras están abiertas */}
+        {!enInicio && (
+          <div className="app-section">
+            <div className="app-section-inner">
+              {seccionActiva === "cobrar" && <Cobrar />}
+              {seccionActiva === "invitar" && <Invitar />}
+              {seccionActiva === "contactos" && <Contactos />}
+              {seccionActiva === "clave" && <CambiarPassword />}
+              {esAdmin && seccionActiva === "usuarios" && (
+                <Usuarios
+                  usuarios={usuarios}
+                  recargar={recargarUsuarios}
+                  onVer={(id) => {
+                    setUsuarioVistoId(id);
+                    setSeccionActiva("inicio");
+                  }}
+                />
+              )}
+            </div>
           </div>
         )}
-      </div>
 
-      {/* BOTÓN VOLVER ATRÁS (Solo se muestra si NO estás en el inicio) */}
-      {seccionActiva !== "inicio" && (
-        <button
-          className="button-action-volver"
-          onClick={() => setSeccionActiva("inicio")}
-        >
-          ⬅️ Volver
-        </button>
-      )}
-
-      {/* Limpiamos el flotado del botón volver para que el título no se descompagine */}
-      <div style={{ clear: "both" }}></div>
-
-      {/* RENDERIZADO CONDICIONAL DE SECCIONES */}
-      {seccionActiva === "cobrar" && (
-        <div>
-          <Cobrar />
-        </div>
-      )}
-
-      {seccionActiva === "invitar" && (
-        <div>
-          <Invitar />
-        </div>
-      )}
-
-      {seccionActiva === "contactos" && (
-        <div>
-          <Contactos />
-        </div>
-      )}
-
-      {seccionActiva === "clave" && (
-        <div>
-          <CambiarPassword />
-        </div>
-      )}
-
-      {esAdmin && seccionActiva === "usuarios" && (
-        <div>
-          <Usuarios
+        {/* La bandeja queda siempre montada (solo se oculta): sigue recibiendo mensajes,
+            avisando con sonido y recordando el chat abierto aunque cambies de sección.
+            key: al cambiar de usuario se reinicia la bandeja y no se mezclan datos. */}
+        <div className={`app-inbox-slot ${enInicio ? "" : "oculto"}`}>
+          <BandejaEntrada
+            key={viendoTodos ? "todos" : usuarioVisto ? usuarioVisto.id : "propia"}
+            usuarioVistoId={viendoTodos ? "todos" : usuarioVisto ? usuarioVisto.id : null}
+            soloLectura={viendoTodos || Boolean(usuarioVisto)}
+            esAdmin={esAdmin}
             usuarios={usuarios}
-            recargar={recargarUsuarios}
-            onVer={(id) => {
-              setUsuarioVistoId(id);
-              setSeccionActiva("inicio");
-            }}
+            alCambiarChatAbierto={setChatAbierto}
           />
         </div>
-      )}
+      </main>
 
-      <hr className="divider" />
-
-      {/* SECCIÓN DE BOTONES DE NAVEGACIÓN */}
-      <div className="actions-section" style={{ flexWrap: 'wrap' }}>
-        <button
-          onClick={() => setSeccionActiva("cobrar")}
-          className={`button-action ${seccionActiva === "cobrar" ? "active" : ""}`}
-        >
-          💰 Cobrar
-        </button>
-
-        <button
-          onClick={() => setSeccionActiva("invitar")}
-          className={`button-action ${seccionActiva === "invitar" ? "active" : ""}`}
-        >
-          📩 Invitar
-        </button>
-
-        <button
-          onClick={() => setSeccionActiva("contactos")}
-          className={`button-action ${seccionActiva === "contactos" ? "active" : ""}`}
-        >
-          👤 Contactos
-        </button>
-
-        {esAdmin && (
+      {/* Navegación inferior: solo en celular */}
+      <nav className="app-bottom-nav">
+        {pestanas.map((p) => (
           <button
-            onClick={() => setSeccionActiva("usuarios")}
-            className={`button-action ${seccionActiva === "usuarios" ? "active" : ""}`}
+            key={p.id}
+            onClick={() => setSeccionActiva(p.id)}
+            className={`app-bottom-btn ${seccionActiva === p.id ? "activo" : ""}`}
           >
-            👥 Usuarios
+            <span className="icono">{p.icono}</span>
+            {p.texto}
           </button>
-        )}
-      </div>
-      <hr />
-
-      {/* Mirando la bandeja de otro usuario: solo lectura */}
-      {(usuarioVisto || viendoTodos) && (
-        <div style={{ background: '#fff8e1', border: '1px solid #ffe082', borderRadius: 8, padding: 10, marginBottom: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-          <span>
-            👁️ Viendo {viendoTodos ? <strong>las bandejas de todos los usuarios</strong> : <>la bandeja de <strong>{usuarioVisto.username}</strong></>} (solo lectura)
-          </span>
-          <button className="button-action-volver" style={{ float: 'none', margin: 0 }} onClick={() => setUsuarioVistoId(null)}>
-            Volver a la mía
-          </button>
-        </div>
-      )}
-
-      {/* key: al cambiar de usuario se reinicia la bandeja y no se mezclan datos */}
-      <BandejaEntrada
-        key={viendoTodos ? "todos" : usuarioVisto ? usuarioVisto.id : "propia"}
-        usuarioVistoId={viendoTodos ? "todos" : usuarioVisto ? usuarioVisto.id : null}
-        soloLectura={viendoTodos || Boolean(usuarioVisto)}
-        esAdmin={esAdmin}
-        usuarios={usuarios}
-      />
+        ))}
+      </nav>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { apiFetch } from '../api';
 import { useAuth } from '../AuthContext';
+import './BotIA.css';
 
 // Interruptor del bot de IA del usuario conectado.
 // - Cada usuario enciende/apaga el suyo.
@@ -31,38 +32,32 @@ export function BotIA() {
     }
   };
 
+  const ayuda = activo
+    ? 'Responde solo a los mensajes de tus clientes.'
+    : permitido
+    ? 'No responde: contestás vos.'
+    : 'Pedile al administrador que te lo habilite.';
+
   return (
-    <div style={{ padding: '0 15px 10px' }}>
-      <div
-        style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
-          background: '#fff', border: '1px solid #ddd', borderRadius: 10, padding: '8px 12px',
-        }}
-      >
-        <span>
-          🤖 <strong>Bot de IA:</strong>{' '}
-          <span style={{ color: activo ? '#2e7d32' : '#666' }}>
-            {!permitido ? 'bloqueado por el administrador' : activo ? 'activado' : 'desactivado'}
-          </span>
-          <br />
-          <small style={{ color: '#666' }}>
-            {activo
-              ? 'Responde solo a los mensajes de tus clientes.'
-              : permitido
-              ? 'No responde: contestás vos.'
-              : 'Pedile al administrador que te lo habilite.'}
-          </small>
+    <div className="bot-ia" title={ayuda}>
+      <span className="bot-ia-texto">
+        🤖 <strong>Bot IA</strong>{' '}
+        <span className={`bot-ia-estado ${activo ? 'on' : ''}`}>
+          {!permitido ? 'bloqueado' : activo ? 'activado' : 'apagado'}
         </span>
-        <button
-          onClick={cambiar}
-          disabled={ocupado || !permitido}
-          className="button-action-volver"
-          style={{ float: 'none', margin: 0, whiteSpace: 'nowrap' }}
-        >
-          {ocupado ? '…' : activo ? 'Apagar' : 'Encender'}
-        </button>
-      </div>
-      {error && <p style={{ color: '#b42318', margin: '6px 0 0', fontSize: 14 }}>{error}</p>}
+      </span>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={activo}
+        aria-label={activo ? 'Apagar bot de IA' : 'Encender bot de IA'}
+        onClick={cambiar}
+        disabled={ocupado || !permitido}
+        className={`bot-ia-switch ${activo ? 'on' : ''}`}
+      >
+        <span className="bot-ia-bolita" />
+      </button>
+      {error && <small className="bot-ia-error">{error}</small>}
     </div>
   );
 }

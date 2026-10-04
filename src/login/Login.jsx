@@ -24,9 +24,9 @@ export default function Login() {
   };
 
   return (
-    <div className="container">
-      <form className="login-form" onSubmit={enviar}>
-        <h1>Exclusivo Para cuenta</h1>
+    <div className="login-page">
+      <form className="login-form login-card" onSubmit={enviar}>
+        <h1>💬 Panel WhatsApp</h1>
         <p className="login-sub">Ingresá con tu usuario</p>
 
         <input

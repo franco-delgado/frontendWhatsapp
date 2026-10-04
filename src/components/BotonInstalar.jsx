@@ -39,18 +39,18 @@ export const BotonInstalar = () => {
       style={{
         backgroundColor: '#25D366', // Verde estilo WhatsApp
         color: '#fff',
-        padding: '10px 16px',
-        border: 'none',
-        borderRadius: '6px',
+        padding: '7px 12px',
+        borderRadius: '999px',
         fontWeight: 'bold',
         cursor: 'pointer',
         display: 'inline-flex',
         alignItems: 'center',
-        gap: '8px',
-        boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
+        gap: '6px',
+        fontSize: '13px',
+        border: '1px solid rgba(255,255,255,0.6)'
       }}
     >
-      📲 Instalar Aplicación
+      📲 Instalar
     </button>
   );
 };

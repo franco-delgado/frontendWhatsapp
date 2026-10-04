@@ -2,28 +2,38 @@ import React, { useState, useEffect, useRef } from 'react';
 import './bandejaEntrada.css';
 import { apiFetch } from '../api';
 
-export const ContestarMensaje = ({ mensajeSeleccionado, alCerrar, alEnviarExitoso, nombreContacto }) => {
+// Cuadro para escribir dentro de la conversación (abajo del chat).
+// - numero: contacto al que se le responde.
+// - citado: mensaje que se está respondiendo (opcional, se muestra arriba del cuadro).
+export const ContestarMensaje = ({ numero, citado, previaCitado, alQuitarCita, alEnviarExitoso }) => {
   const [textoRespuesta, setTextoRespuesta] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState(null);
 
   const textareaRef = useRef(null);
 
+  // En PC se enfoca solo; en celular no, para que no salte el teclado al entrar al chat.
   useEffect(() => {
-    if (mensajeSeleccionado && textareaRef.current) {
-      textareaRef.current.focus({ preventScroll: true });
+    if (window.matchMedia?.('(pointer: fine)').matches) {
+      textareaRef.current?.focus({ preventScroll: true });
     }
-  }, [mensajeSeleccionado]);
-
-  useEffect(() => {
-    document.body.classList.add('modal-abierto');
-    return () => document.body.classList.remove('modal-abierto');
   }, []);
 
+  // Al elegir un mensaje para responder, el cursor vuelve al cuadro.
+  useEffect(() => {
+    if (citado) textareaRef.current?.focus({ preventScroll: true });
+  }, [citado]);
 
-  const manejarEnvio = async (e) => {
-    e.preventDefault();
-    if (!textoRespuesta.trim()) return;
+  const ajustarAltura = () => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${Math.min(el.scrollHeight, 140)}px`;
+  };
+
+  const enviar = async () => {
+    const texto = textoRespuesta.trim();
+    if (!texto || enviando) return;
 
     setEnviando(true);
     setError(null);
@@ -31,14 +41,12 @@ export const ContestarMensaje = ({ mensajeSeleccionado, alCerrar, alEnviarExitos
     try {
       const response = await apiFetch('/api/mensajes/responder', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          to: mensajeSeleccionado.from,
-          messageText: textoRespuesta,
+          to: numero,
+          messageText: texto,
           // Meta espera el id de WhatsApp (wamid), no el id de la base de datos.
-          contextMessageId: mensajeSeleccionado.wamid || null
+          contextMessageId: citado?.wamid || null,
         }),
       });
 
@@ -46,9 +54,9 @@ export const ContestarMensaje = ({ mensajeSeleccionado, alCerrar, alEnviarExitos
 
       if (data.success) {
         setTextoRespuesta('');
+        requestAnimationFrame(ajustarAltura);
         if (alEnviarExitoso) alEnviarExitoso();
       } else {
-        // El backend devuelve el motivo en "error"; antes solo se leía "message".
         setError(data.error || data.message || 'Error al enviar el mensaje.');
       }
     } catch (err) {
@@ -59,52 +67,55 @@ export const ContestarMensaje = ({ mensajeSeleccionado, alCerrar, alEnviarExitos
     }
   };
 
-  if (!mensajeSeleccionado) return null;
+  const manejarEnvio = (e) => {
+    e.preventDefault();
+    enviar();
+  };
+
+  // Enter envía en PC (Shift+Enter = salto de línea). En celular Enter hace salto de línea.
+  const alTeclear = (e) => {
+    const esTactil = window.matchMedia?.('(pointer: coarse)').matches;
+    if (e.key === 'Enter' && !e.shiftKey && !esTactil) {
+      e.preventDefault();
+      enviar();
+    }
+  };
 
   return (
-    <div className="reply-overlay" onClick={alCerrar}>
-      {/* e.stopPropagation() evita que al hacer clic dentro de la caja se cierre la ventana */}
-      <div className="reply-container" onClick={(e) => e.stopPropagation()}>
-        <div className="reply-header">
-          <h4>
-            Responder a: <strong>{nombreContacto || mensajeSeleccionado.from}</strong>
-          </h4>
-          <button type="button" onClick={alCerrar} className="btn-cerrar">
+    <form className="wa-composer" onSubmit={manejarEnvio}>
+      {citado && (
+        <div className="wa-composer-cita">
+          <div className="wa-composer-cita-texto">
+            <strong>Respondiendo a:</strong> {previaCitado}
+          </div>
+          <button type="button" onClick={alQuitarCita} title="Quitar cita" className="wa-composer-cita-x">
             ✕
           </button>
         </div>
+      )}
 
-        <div className="reply-original-preview">
-          <small>Mensaje original:</small>
-          <p>"{mensajeSeleccionado.text}"</p>
-        </div>
-
-        <form onSubmit={manejarEnvio} className="reply-form">
-          <textarea
-            ref={textareaRef}
-            value={textoRespuesta}
-            onChange={(e) => setTextoRespuesta(e.target.value)}
-            placeholder="Escribe tu respuesta libre..."
-            rows="4"
-            disabled={enviando}
-          />
-
-          <small style={{ color: '#b26a00' }}>
-            ⏸️ Al enviar, el bot automático deja de responder a este contacto por 1 hora.
-          </small>
-
-          {error && <p className="error-text">{error}</p>}
-
-          <div className="reply-actions">
-            <button type="button" onClick={alCerrar} className="btn-cancelar" disabled={enviando}>
-              Cancelar
-            </button>
-            <button type="submit" className="btn-enviar" disabled={enviando || !textoRespuesta.trim()}>
-              {enviando ? 'Enviando...' : 'Enviar Respuesta'}
-            </button>
-          </div>
-        </form>
+      <div className="wa-composer-fila">
+        <textarea
+          ref={textareaRef}
+          value={textoRespuesta}
+          onChange={(e) => {
+            setTextoRespuesta(e.target.value);
+            ajustarAltura();
+          }}
+          onKeyDown={alTeclear}
+          placeholder="Escribí un mensaje…"
+          rows={1}
+          disabled={enviando}
+        />
+        <button type="submit" className="wa-composer-enviar" disabled={enviando || !textoRespuesta.trim()} title="Enviar">
+          {enviando ? '…' : '➤'}
+        </button>
       </div>
-    </div>
+
+      <small className="wa-composer-aviso">
+        ⏸️ Al enviar, el bot automático deja de responder a este contacto por 1 hora.
+      </small>
+      {error && <p className="wa-composer-error">{error}</p>}
+    </form>
   );
 };

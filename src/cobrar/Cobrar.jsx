@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useEnviarWhatsApp } from "../hooks/useEnviarWhatsApp";
 import "./Cobrar.css";
 import useAgenda from "../hooks/useAgenda";
@@ -7,6 +7,17 @@ export default function Cobrar() {
   // La agenda viene del servidor. El apellido y el DNI no se usan acá: la plantilla
   // solo lleva nombre y monto.
   const { contactos, error: errorAgenda } = useAgenda();
+
+  // Solo se cobra a quienes tienen un monto mayor a 0. Los contactos sin monto
+  // (vacío, null, 0 o inválido) no aparecen en esta plantilla ni reciben el mensaje.
+  const contactosConMonto = useMemo(
+    () =>
+      contactos.filter((c) => {
+        const monto = Number(String(c.monto ?? "").replace(",", "."));
+        return Number.isFinite(monto) && monto > 0;
+      }),
+    [contactos]
+  );
 
   const [seleccionados, setSeleccionados] = useState([]);
   
@@ -17,8 +28,8 @@ export default function Cobrar() {
   const { enviarMasivo, loading: cargando } = useEnviarWhatsApp();
 
   useEffect(() => {
-    setSeleccionados(contactos.map((c) => c.id));
-  }, [contactos]);
+    setSeleccionados(contactosConMonto.map((c) => c.id));
+  }, [contactosConMonto]);
 
   const manejarSeleccion = (id) => {
     if (seleccionados.includes(id)) {
@@ -29,7 +40,7 @@ export default function Cobrar() {
   };
 
   const enviarCobro = async () => {
-    const listaAEnviar = contactos.filter((c) => seleccionados.includes(c.id));
+    const listaAEnviar = contactosConMonto.filter((c) => seleccionados.includes(c.id));
 
     if (listaAEnviar.length === 0) {
       alert("Por favor, selecciona al menos un contacto de la lista.");
@@ -179,7 +190,7 @@ export default function Cobrar() {
       <div className="usuarios-section" style={{ marginTop: "20px" }}>
         <h3>Seleccionar Destinatarios</h3>
         <div className="usuarios-lista">
-          {contactos.map((usuario) => (
+          {contactosConMonto.map((usuario) => (
             <div key={usuario.id} className="usuario-item">
               <input
                 type="checkbox"
@@ -188,18 +199,16 @@ export default function Cobrar() {
               />
               <div className="usuario-info">
                 <strong>{`${usuario.nombre} ${usuario.apellido || ""}`.trim()}</strong> ({usuario.numero})
-                {usuario.monto > 0 && (
-                  <span
-                    style={{
-                      color: "#d9534f",
-                      fontSize: "12px",
-                      marginLeft: "8px",
-                      fontWeight: "bold"
-                    }}
-                  >
-                    (Monto a cobrar: ${usuario.monto})
-                  </span>
-                )}
+                <span
+                  style={{
+                    color: "#d9534f",
+                    fontSize: "12px",
+                    marginLeft: "8px",
+                    fontWeight: "bold"
+                  }}
+                >
+                  (Monto a cobrar: ${usuario.monto})
+                </span>
               </div>
             </div>
           ))}
@@ -209,7 +218,7 @@ export default function Cobrar() {
               ⚠️ No se pudo cargar la agenda: {errorAgenda}
             </p>
           )}
-          {contactos.length === 0 && !errorAgenda && (
+          {contactosConMonto.length === 0 && !errorAgenda && (
             <p
               style={{
                 fontSize: "14px",
@@ -218,7 +227,9 @@ export default function Cobrar() {
                 margin: "10px 0",
               }}
             >
-              No hay contactos guardados.
+              {contactos.length === 0
+                ? "No hay contactos guardados."
+                : "No hay contactos con monto para cobrar."}
             </p>
           )}
         </div>

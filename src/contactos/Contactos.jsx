@@ -25,6 +25,42 @@ const normalizar = (t) =>
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
 
+// Decide si un contacto coincide con lo que se escribió en el buscador.
+//  - Si lo escrito parece un número (dígitos con espacios, puntos, guiones, "+" o paréntesis),
+//    se compara solo por dígitos contra el DNI y el teléfono: "27.345.678" o "+54 9 3825 12-3456"
+//    encuentran al contacto aunque en la base estén guardados sin separadores.
+//  - Si es texto, cada palabra debe aparecer en el nombre o apellido, en cualquier orden
+//    ("perez juan" encuentra a "Juan Pérez") y sin distinguir tildes ni mayúsculas.
+//  - Cada campo se revisa por separado, así no hay coincidencias falsas que "crucen" DNI y teléfono.
+const SOLO_NUMERICO = /^[\d\s().+-]+$/;
+
+function coincideBusqueda(c, busqueda) {
+  const texto = busqueda.trim();
+  if (!texto) return true;
+
+  const dni = soloDigitos(c.dni);
+  const tel = soloDigitos(c.numero);
+  const nombre = normalizar(nombreCompleto(c));
+
+  const coincideDigitos = (d) => {
+    if (!d) return false;
+    if (dni.includes(d) || tel.includes(d)) return true;
+    // Un celular argentino puede estar como 549XXXXXXXXXX o 54XXXXXXXXXX (con/sin el 9):
+    // si se escribió un número completo, se comparan los últimos 8 dígitos.
+    return d.length >= 9 && tel.length >= 8 && tel.slice(-8) === d.slice(-8);
+  };
+
+  if (SOLO_NUMERICO.test(texto)) return coincideDigitos(soloDigitos(texto));
+
+  return normalizar(texto)
+    .split(/\s+/)
+    .every((palabra) => {
+      if (nombre.includes(palabra)) return true;
+      const d = soloDigitos(palabra);
+      return d.length > 0 && d.length === palabra.length && coincideDigitos(d);
+    });
+}
+
 export default function Contactos() {
   // La agenda vive en el servidor (así el bot también puede consultar el DNI y el monto).
   const { contactos, cargando, error, crear, actualizar, eliminar, importarExcel } = useAgenda();
@@ -148,7 +184,7 @@ export default function Contactos() {
 
   const q = normalizar(busqueda.trim());
   const contactosFiltrados = contactos.filter((c) => {
-    if (q && !normalizar(`${nombreCompleto(c)} ${c.dni} ${c.numero}`).includes(q)) return false;
+    if (q && !coincideBusqueda(c, busqueda)) return false;
     const respondio = Boolean(obtenerRespuesta(c.numero));
     if (filtroRespuesta === "respondieron" && !respondio) return false;
     if (filtroRespuesta === "sinRespuesta" && respondio) return false;

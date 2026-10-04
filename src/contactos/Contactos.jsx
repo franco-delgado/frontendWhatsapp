@@ -72,6 +72,7 @@ export default function Contactos() {
   // Filtros
   const [filtroRespuesta, setFiltroRespuesta] = useState("todos"); // todos | respondieron | sinRespuesta
   const [filtroAlta, setFiltroAlta] = useState("todos"); // todos | conAlta | sinAlta
+  const [filtroInvitacion, setFiltroInvitacion] = useState("todos"); // todos | invitados | sinInvitar
   const [busqueda, setBusqueda] = useState("");
 
   // Estados para el formulario de creación
@@ -181,6 +182,7 @@ export default function Contactos() {
   // Contadores y lista filtrada
   const totalRespondieron = contactos.filter((c) => obtenerRespuesta(c.numero)).length;
   const totalConAlta = contactos.filter((c) => c.alta).length;
+  const totalInvitados = contactos.filter((c) => c.invitado).length;
 
   const q = normalizar(busqueda.trim());
   const contactosFiltrados = contactos.filter((c) => {
@@ -190,10 +192,16 @@ export default function Contactos() {
     if (filtroRespuesta === "sinRespuesta" && respondio) return false;
     if (filtroAlta === "conAlta" && !c.alta) return false;
     if (filtroAlta === "sinAlta" && c.alta) return false;
+    if (filtroInvitacion === "invitados" && !c.invitado) return false;
+    if (filtroInvitacion === "sinInvitar" && c.invitado) return false;
     return true;
   });
 
-  const hayFiltros = filtroRespuesta !== "todos" || filtroAlta !== "todos" || q !== "";
+  const hayFiltros =
+    filtroRespuesta !== "todos" ||
+    filtroAlta !== "todos" ||
+    filtroInvitacion !== "todos" ||
+    q !== "";
 
   return (
     <div className="contactos-container">
@@ -319,6 +327,26 @@ export default function Contactos() {
             ))}
           </div>
         </div>
+
+        <div className="filtro-grupo">
+          <span className="filtro-label">Invitación</span>
+          <div className="filtro-chips">
+            {[
+              ["todos", `Todos (${contactos.length})`],
+              ["sinInvitar", `⏳ Sin invitar (${contactos.length - totalInvitados})`],
+              ["invitados", `✉️ Ya invitados (${totalInvitados})`],
+            ].map(([valor, texto]) => (
+              <button
+                key={valor}
+                type="button"
+                className={`chip ${filtroInvitacion === valor ? "chip-activo" : ""}`}
+                onClick={() => setFiltroInvitacion(valor)}
+              >
+                {texto}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       <ul className="contactos-lista">
@@ -409,6 +437,17 @@ export default function Contactos() {
                         <span className="badge badge-neutro">Sin respuesta</span>
                       );
                     })()}
+                    {c.invitado ? (
+                      <span
+                        className="badge badge-respondio"
+                        title="Ya recibió la plantilla de invitación"
+                      >
+                        ✉️ Invitado
+                        {c.fechaInvitacion ? ` · ${formatearFecha(c.fechaInvitacion).split(",")[0]}` : ""}
+                      </span>
+                    ) : (
+                      <span className="badge badge-neutro">Sin invitar</span>
+                    )}
                     {c.alta ? (
                       <span className="badge badge-alta">
                         ✅ Dada de alta{c.fechaAlta ? ` · ${formatearFecha(c.fechaAlta).split(",")[0]}` : ""}

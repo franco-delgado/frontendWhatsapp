@@ -3,11 +3,16 @@ import { useEnviarWhatsApp } from "../hooks/useEnviarWhatsApp";
 import "./Invitar.css";
 import useAgenda from "../hooks/useAgenda";
 
+const formatearFecha = (iso) =>
+  iso ? new Date(iso).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" }) : "";
+
 export default function Invitar() {
   // La agenda viene del servidor (igual que en Cobrar), no del localStorage.
-  const { contactos, error: errorAgenda } = useAgenda();
+  const { contactos, error: errorAgenda, recargar } = useAgenda();
 
   const [seleccionados, setSeleccionados] = useState([]);
+  // sinInvitar | invitados | todos. Al elegir uno se seleccionan justo esos contactos.
+  const [filtro, setFiltro] = useState("sinInvitar");
 
   // Estados adaptados a las variables de la plantilla en Meta
   const [tituloVar, setTituloVar] = useState("");          // Header {{1}}
@@ -16,9 +21,27 @@ export default function Invitar() {
 
   const { enviarMasivo, loading: cargando } = useEnviarWhatsApp();
 
+  // Por defecto solo se seleccionan los que todavía no recibieron la invitación.
+  // (También se ejecuta al recargar la agenda después de enviar: los recién invitados se destildan.)
   useEffect(() => {
-    setSeleccionados(contactos.map((c) => c.id));
+    setFiltro("sinInvitar");
+    setSeleccionados(contactos.filter((c) => !c.invitado).map((c) => c.id));
   }, [contactos]);
+
+  const totalInvitados = contactos.filter((c) => c.invitado).length;
+  const totalSinInvitar = contactos.length - totalInvitados;
+
+  const contactosVisibles = contactos.filter((c) =>
+    filtro === "todos" ? true : filtro === "invitados" ? c.invitado : !c.invitado
+  );
+
+  const elegirFiltro = (valor) => {
+    setFiltro(valor);
+    const visibles = contactos.filter((c) =>
+      valor === "todos" ? true : valor === "invitados" ? c.invitado : !c.invitado
+    );
+    setSeleccionados(visibles.map((c) => c.id));
+  };
 
   const manejarSeleccion = (id) => {
     if (seleccionados.includes(id)) {
@@ -33,6 +56,17 @@ export default function Invitar() {
 
     if (listaAEnviar.length === 0) {
       alert("Por favor, selecciona al menos un contacto de la lista.");
+      return;
+    }
+
+    // Evita reenviar (y pagar) la plantilla a quienes ya la recibieron sin darse cuenta.
+    const yaInvitados = listaAEnviar.filter((c) => c.invitado).length;
+    if (
+      yaInvitados > 0 &&
+      !window.confirm(
+        `${yaInvitados} de los ${listaAEnviar.length} contactos seleccionados ya recibieron la invitación.\n¿Querés enviársela de nuevo?`
+      )
+    ) {
       return;
     }
 
@@ -54,6 +88,7 @@ export default function Invitar() {
         type: "template",
         templateName: "invitacion2109", // NOMBRE DE TU PLANTILLA
         languageCode: "es_AR",
+        marcarInvitacion: true, // el servidor marca al cliente como "invitado" si el envío sale bien
         parameters: {
           header: [valTitulo],                       // Header {{1}}
           body: [valCuerpo1, valCuerpo2, valCuerpo3] // Body {{1}}, Body {{2}} y Body {{3}}
@@ -63,6 +98,9 @@ export default function Invitar() {
 
     try {
       const datos = await enviarMasivo(contactsPayload);
+
+      // Trae de nuevo la agenda para que los recién invitados queden marcados.
+      await recargar();
 
       if (datos?.success) {
         const fallidos = datos.fallidos || 0;
@@ -193,8 +231,26 @@ export default function Invitar() {
 
       <div className="usuarios-section" style={{ marginTop: "20px" }}>
         <h3>Contactos Disponibles</h3>
+
+        <div className="invitar-chips">
+          {[
+            ["sinInvitar", `⏳ Sin invitar (${totalSinInvitar})`],
+            ["invitados", `✉️ Ya invitados (${totalInvitados})`],
+            ["todos", `Todos (${contactos.length})`],
+          ].map(([valor, texto]) => (
+            <button
+              key={valor}
+              type="button"
+              className={`invitar-chip ${filtro === valor ? "invitar-chip-activo" : ""}`}
+              onClick={() => elegirFiltro(valor)}
+            >
+              {texto}
+            </button>
+          ))}
+        </div>
+
         <div className="usuarios-lista">
-          {contactos.map((usuario) => (
+          {contactosVisibles.map((usuario) => (
             <div key={usuario.id} className="usuario-item">
               <input
                 type="checkbox"
@@ -203,6 +259,16 @@ export default function Invitar() {
               />
               <div className="usuario-info">
                 <strong>{`${usuario.nombre} ${usuario.apellido || ""}`.trim()}</strong> ({usuario.numero})
+                {usuario.invitado ? (
+                  <span
+                    className="invitar-badge invitar-badge-invitado"
+                    title="Ya recibió la plantilla de invitación"
+                  >
+                    ✉️ Invitado{usuario.fechaInvitacion ? ` · ${formatearFecha(usuario.fechaInvitacion)}` : ""}
+                  </span>
+                ) : (
+                  <span className="invitar-badge invitar-badge-pendiente">⏳ Sin invitar</span>
+                )}
                 {usuario.monto > 0 && (
                   <span
                     style={{
@@ -220,6 +286,11 @@ export default function Invitar() {
           ))}
 
           {errorAgenda && (<p style={{ color: "#d9534f", fontSize: "13px" }}>⚠️ No se pudo cargar la agenda: {errorAgenda}</p>)}
+          {contactos.length > 0 && contactosVisibles.length === 0 && (
+            <p style={{ fontSize: "14px", color: "#777", textAlign: "center", margin: "10px 0" }}>
+              {filtro === "sinInvitar" ? "Todos tus contactos ya fueron invitados. 🎉" : "Ningún contacto en esta lista."}
+            </p>
+          )}
           {contactos.length === 0 && !errorAgenda && (
             <p
               style={{

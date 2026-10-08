@@ -1,4 +1,4 @@
-/* Interruptor del bot de IA (vive en la cabecera verde) */
+/* Interruptor del bot de IA (vive en la cabecera azul) */
 .bot-ia {
   position: relative;
   display: flex;
@@ -15,7 +15,7 @@
   color: #667781;
 }
 .bot-ia-estado.on {
-  color: #1a8f4a;
+  color: #2563eb;
   font-weight: bold;
 }
 .bot-ia-switch {
@@ -28,7 +28,7 @@
   transition: background 0.2s;
 }
 .bot-ia-switch.on {
-  background: #25d366;
+  background: #2563eb;
 }
 .bot-ia-switch:disabled {
   opacity: 0.5;

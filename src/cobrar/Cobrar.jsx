@@ -156,11 +156,11 @@ export default function Cobrar() {
         <div style={{ margin: 0, fontSize: "13px", lineHeight: "1.4", color: "#444" }}>
           <p style={{ margin: "0 0 8px 0" }}>
             Hola{" "}
-            <strong style={{ color: "#28a745" }}>
+            <strong style={{ color: "#2563eb" }}>
               {"{Nombre agendado}"}
             </strong>
             . Le escribimos desde{" "}
-            <strong style={{ color: "#28a745" }}>{nombreNegocio.trim() || "{{2}}"}</strong> para informarle que ya se encuentra disponible el resumen de su cuenta correspondiente al consumo del mes, por un monto de{" "}
+            <strong style={{ color: "#2563eb" }}>{nombreNegocio.trim() || "{{2}}"}</strong> para informarle que ya se encuentra disponible el resumen de su cuenta correspondiente al consumo del mes, por un monto de{" "}
             <strong style={{ color: "#d9534f" }}>${"{Monto a cobrar}"}</strong>.
           </p>
 

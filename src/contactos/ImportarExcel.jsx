@@ -1,7 +1,8 @@
 // Carga masiva de clientes desde un archivo Excel (.xlsx).
 // 1) Se elige el archivo y se lee en el navegador. 2) Se muestra una vista previa con las
-// filas válidas e inválidas. 3) Al confirmar, se envían al servidor, que además salta los
-// duplicados (teléfono o DNI ya cargados) y devuelve el detalle de lo que no pudo cargar.
+// filas válidas e inválidas. 3) Al confirmar, se envían al servidor: los teléfonos nuevos se
+// cargan, los que ya estaban agendados actualizan su monto a cobrar, y devuelve el detalle
+// de lo que no pudo cargar (DNI repetido, teléfono agendado por otro usuario, etc.).
 import { useRef, useState } from "react";
 import { readSheet } from "read-excel-file/browser";
 
@@ -164,7 +165,8 @@ export default function ImportarExcel({ importar }) {
             <a href="/plantilla-clientes.xlsx" download>
               Descargar plantilla
             </a>
-            . Los clientes que ya estén cargados (mismo teléfono o DNI) se saltean.
+            . Si el teléfono ya está agendado, se <b>actualiza su monto a cobrar</b>; si lo tiene
+            otro usuario o el DNI está repetido, esa fila no se carga.
           </small>
 
           <input
@@ -219,7 +221,13 @@ export default function ImportarExcel({ importar }) {
           {resultado && (
             <div className="importar-preview">
               <p>
-                ✅ Se cargaron <b>{resultado.importados}</b> cliente(s).
+                ✅ Se cargaron <b>{resultado.importados}</b> cliente(s) nuevo(s).
+                {resultado.actualizados > 0 && (
+                  <> Se actualizó el monto de <b>{resultado.actualizados}</b> cliente(s) que ya estaban.</>
+                )}
+                {resultado.sinCambios > 0 && (
+                  <> {resultado.sinCambios} ya estaban con ese mismo monto.</>
+                )}
                 {resultado.omitidos > 0 && <> No se cargaron {resultado.omitidos}:</>}
               </p>
               {resultado.errores?.length > 0 && (

@@ -52,7 +52,7 @@ export const BotonNotificaciones = () => {
       );
   } else if (suscripto) {
     texto = '🔔 Notificaciones activadas';
-    color = '#28a745';
+    color = '#2563eb';
     alHacerClick = desactivar;
   } else {
     texto = '🔕 Activar notificaciones';

@@ -79,7 +79,7 @@
   font-size: 14px;
 }
 .wa-buscador input:focus {
-  outline: 2px solid #25d366;
+  outline: 2px solid #2563eb;
 }
 .wa-lista {
   flex: 1;
@@ -111,8 +111,8 @@
   background: #f5f6f6;
 }
 .wa-contacto.activo {
-  background: #e7f6ee;
-  box-shadow: inset 4px 0 0 #25d366;
+  background: #e8efff;
+  box-shadow: inset 4px 0 0 #2563eb;
 }
 .wa-avatar {
   flex: 0 0 auto;
@@ -168,7 +168,7 @@
   min-width: 20px;
   padding: 1px 7px;
   border-radius: 999px;
-  background: #25d366;
+  background: #2563eb;
   color: #fff;
   font-size: 12px;
   font-weight: bold;
@@ -348,7 +348,7 @@
 }
 .wa-msg--out {
   align-self: flex-end;
-  background: #d9fdd3;
+  background: #dbe7ff;
   border-top-right-radius: 2px;
 }
 .wa-msg.seleccionado {
@@ -454,7 +454,7 @@
   box-sizing: border-box;
 }
 .wa-composer textarea:focus {
-  outline: 2px solid #25d366;
+  outline: 2px solid #2563eb;
 }
 .wa-composer-enviar {
   flex: 0 0 auto;
@@ -462,15 +462,15 @@
   height: 42px;
   padding: 0;
   border-radius: 50%;
-  background: #25d366;
+  background: #2563eb;
   color: #fff;
   font-size: 18px;
 }
 .wa-composer-enviar:hover:not(:disabled) {
-  background: #1ebd58;
+  background: #1d4ed8;
 }
 .wa-composer-enviar:disabled {
-  background: #a5d9bb;
+  background: #a8c0f5;
   cursor: not-allowed;
 }
 .wa-composer-aviso {
@@ -518,7 +518,7 @@
   .wa-chat-cabecera {
     padding: 8px 10px;
     gap: 8px;
-    background: #075e54;
+    background: #080387;
     border-bottom: none;
   }
   .wa-chat-cabecera .wa-chat-titulo strong,

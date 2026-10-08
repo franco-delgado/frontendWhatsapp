@@ -81,7 +81,7 @@
 }
 
 .contacto-monto {
-  color: #28a745;
+  color: #2563eb;
   font-weight: bold;
   font-size: 15px;
 }
@@ -93,7 +93,7 @@
 
 .btn-whatsapp {
   padding: 8px 14px;
-  background-color: #25d366;
+  background-color: #2563eb;
   color: white;
   border: none;
   border-radius: 6px;
@@ -106,7 +106,7 @@
 }
 
 .btn-whatsapp:hover {
-  background-color: #1ebd58;
+  background-color: #1d4ed8;
 }
 
 .btn-eliminar {
@@ -239,8 +239,8 @@
 }
 
 .badge-respondio {
-  background: #d4edda;
-  color: #155724;
+  background: #dbe7ff;
+  color: #1e3a8a;
 }
 
 .badge-neutro {

@@ -192,9 +192,9 @@ export default function Invitar() {
 
         <div style={{ margin: 0, fontSize: "13px", lineHeight: "1.4", color: "#444" }}>
           <p style={{ margin: "0 0 8px 0" }}>
-            Hola <strong style={{ color: "#28a745" }}>{"{Nombre agendado}"}</strong>, te saluda{" "}
-            <strong style={{ color: "#28a745" }}>{textoAdicional.trim() || "{{2}}"}</strong> de{" "}
-            <strong style={{ color: "#28a745" }}>{nombreNegocio.trim() || "{{3}}"}</strong>. 👋
+            Hola <strong style={{ color: "#2563eb" }}>{"{Nombre agendado}"}</strong>, te saluda{" "}
+            <strong style={{ color: "#2563eb" }}>{textoAdicional.trim() || "{{2}}"}</strong> de{" "}
+            <strong style={{ color: "#2563eb" }}>{nombreNegocio.trim() || "{{3}}"}</strong>. 👋
           </p>
 
           <p style={{ margin: "0 0 8px 0" }}>

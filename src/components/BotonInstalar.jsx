@@ -37,7 +37,7 @@ export const BotonInstalar = () => {
     <button
       onClick={handleInstalarClick}
       style={{
-        backgroundColor: '#25D366', // Verde estilo WhatsApp
+        backgroundColor: '#2563eb', // Azul
         color: '#fff',
         padding: '7px 12px',
         borderRadius: '999px',

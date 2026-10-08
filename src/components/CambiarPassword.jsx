@@ -45,7 +45,7 @@ export function CambiarPassword() {
       <input style={campo} type="password" placeholder="Contraseña actual" autoComplete="current-password" value={actual} onChange={(e) => setActual(e.target.value)} />
       <input style={campo} type="password" placeholder="Contraseña nueva (mín. 6)" autoComplete="new-password" value={nueva} onChange={(e) => setNueva(e.target.value)} />
       <input style={campo} type="password" placeholder="Repetir contraseña nueva" autoComplete="new-password" value={repetir} onChange={(e) => setRepetir(e.target.value)} />
-      {mensaje && <small style={{ color: mensaje.ok ? '#2e7d32' : '#b42318' }}>{mensaje.texto}</small>}
+      {mensaje && <small style={{ color: mensaje.ok ? '#2563eb' : '#b42318' }}>{mensaje.texto}</small>}
       <button type="submit" className="button-primary" disabled={guardando || !actual || !nueva || !repetir}>
         {guardando ? 'Guardando…' : 'Guardar'}
       </button>

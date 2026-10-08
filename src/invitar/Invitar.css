@@ -85,7 +85,7 @@
 }
 
 .btn-enviar-cobros {
-  background-color: #28a745;
+  background-color: #2563eb;
   color: white;
   border: none;
   padding: 12px;
@@ -99,7 +99,7 @@
 }
 
 .btn-enviar-cobros:hover {
-  background-color: #218838;
+  background-color: #1d4ed8;
 }
 
 .usuarios-section h3 {
@@ -187,8 +187,8 @@
 }
 
 .invitar-badge-invitado {
-  background: #d4edda;
-  color: #155724;
+  background: #dbe7ff;
+  color: #1e3a8a;
 }
 
 .invitar-badge-pendiente {

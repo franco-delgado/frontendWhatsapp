@@ -1,8 +1,10 @@
 /* src/App.css — estructura general de la app (PC y móvil) */
 
 :root {
-  --wa-verde-oscuro: #075e54;
-  --wa-verde: #25d366;
+  --wa-azul-oscuro: #080387;
+  --wa-azul-degradado: linear-gradient(#03013c, #080387);
+  --wa-azul: #2563eb;
+  --wa-azul-claro: #60a5fa;
   --wa-fondo: #f0f2f5;
   --wa-borde: #e4e6e8;
   --wa-texto-suave: #667781;
@@ -16,7 +18,7 @@
   justify-content: center;
   padding: 20px;
   box-sizing: border-box;
-  background: linear-gradient(180deg, var(--wa-verde-oscuro) 0 220px, var(--wa-fondo) 220px);
+  background: linear-gradient(180deg, #03013c 0, #080387 220px, var(--wa-fondo) 220px);
 }
 .login-card {
   width: 100%;
@@ -30,7 +32,7 @@
 
 /* ---------- Botones reutilizados (Login, Clave, Usuarios) ---------- */
 .button-primary {
-  background-color: #25d366;
+  background-color: #2563eb;
   color: #fff;
   border: none;
   padding: 12px 20px;
@@ -42,10 +44,10 @@
   transition: background 0.2s;
 }
 .button-primary:hover {
-  background-color: #20ba59;
+  background-color: #1d4ed8;
 }
 .button-primary:disabled {
-  background-color: #a5eba5;
+  background-color: #a8c0f5;
   cursor: not-allowed;
 }
 
@@ -74,7 +76,7 @@
   gap: 16px;
   padding: 0 20px;
   min-height: 56px;
-  background: var(--wa-verde-oscuro);
+  background: var(--wa-azul-degradado);
   color: #fff;
 }
 .app-brand {
@@ -107,7 +109,7 @@
 }
 .app-tab.activo {
   color: #fff;
-  border-bottom-color: var(--wa-verde);
+  border-bottom-color: var(--wa-azul-claro);
 }
 .app-actions {
   margin-left: auto;
@@ -275,7 +277,7 @@
     line-height: 1;
   }
   .app-bottom-btn.activo {
-    color: var(--wa-verde-oscuro);
+    color: var(--wa-azul-oscuro);
   }
 
   /* Con un chat abierto en el celular: pantalla completa, como WhatsApp */

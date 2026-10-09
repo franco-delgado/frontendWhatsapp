@@ -299,3 +299,66 @@
 .importar-errores { margin: 0; padding-left: 18px; max-height: 180px; overflow-y: auto; font-size: 13px; color: #b00020; }
 .importar-error { color: #b00020; }
 .importar-botones { display: flex; gap: 8px; }
+
+/* ---- Tabla de contactos ---- */
+.contactos-container {
+  max-width: 1150px;
+}
+
+.tabla-wrapper {
+  overflow-x: auto;
+}
+
+.contactos-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  background: #fff;
+}
+
+.contactos-tabla th,
+.contactos-tabla td {
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.contactos-tabla thead th {
+  background: #f3f4f6;
+  color: #555;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.contactos-tabla tbody tr:hover {
+  background: #f9fafb;
+}
+
+.contactos-tabla .celda-monto {
+  color: #2563eb;
+  font-weight: bold;
+}
+
+.contactos-tabla .fila-edicion {
+  background: #f0f7ff;
+  outline: 1px solid #007bff;
+}
+
+.contactos-tabla .fila-edicion .form-input {
+  width: 100%;
+  min-width: 90px;
+  padding: 6px 8px;
+  box-sizing: border-box;
+}
+
+.btn-chico {
+  padding: 8px 12px;
+  font-size: 14px;
+}
+
+.icono-respondio {
+  cursor: help;
+}

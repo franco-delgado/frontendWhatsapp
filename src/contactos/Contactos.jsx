@@ -349,74 +349,106 @@ export default function Contactos() {
         </div>
       </div>
 
-      <ul className="contactos-lista">
-        {contactosFiltrados.map((c) => (
-          <React.Fragment key={c.id}>
-            {idEditando === c.id ? (
-              /* VISTA DE EDICIÓN */
-              <li className="contacto-item-edit">
-                <div className="edit-inputs">
-                  <input
-                    type="text"
-                    placeholder="Nombre"
-                    value={nombreEditado}
-                    onChange={(e) => setNombreEditado(e.target.value)}
-                    className="form-input"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Apellido"
-                    value={apellidoEditado}
-                    onChange={(e) => setApellidoEditado(e.target.value)}
-                    className="form-input"
-                  />
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    placeholder="DNI"
-                    value={dniEditado}
-                    onChange={(e) => setDniEditado(soloDigitos(e.target.value).slice(0, 8))}
-                    className="form-input"
-                  />
-                  <input
-                    type="text"
-                    value={numeroEditado}
-                    onChange={(e) => setNumeroEditado(e.target.value)}
-                    className="form-input"
-                  />
-                  <input
-                    type="number"
-                    value={montoEditado}
-                    onChange={(e) => setMontoEditado(e.target.value)}
-                    className="form-input"
-                  />
-                </div>
-                <div className="contacto-acciones">
-                  <button
-                    onClick={() => handleGuardarEdicion(c.id)}
-                    className="btn-guardar"
-                  >
-                    ✓ Guardar
-                  </button>
-                  <button
-                    onClick={() => setIdEditando(null)}
-                    className="btn-cancelar"
-                  >
-                    Cancelar
-                  </button>
-                </div>
-              </li>
-            ) : (
-              /* VISTA NORMAL DEL CONTACTO */
-              <li className="contacto-item">
-                <div className="contacto-info">
-                  <strong>{nombreCompleto(c)}</strong>
-                  <span className="contacto-tel">
-                    {c.dni ? `DNI: ${c.dni} · ` : ""}Tel: {c.numero}
-                  </span>
-                  <span className="contacto-monto">Deuda: ${c.monto}</span>
-                  <div className="contacto-badges">
-                    {!c.dni && (
+      <div className="tabla-wrapper">
+        <table className="contactos-tabla">
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Apellido</th>
+              <th>DNI</th>
+              <th>Teléfono</th>
+              <th>Monto</th>
+              <th>Invitación</th>
+              <th>Alta</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {contactosFiltrados.map((c) =>
+              idEditando === c.id ? (
+                /* FILA EN EDICIÓN */
+                <tr key={c.id} className="fila-edicion">
+                  <td>
+                    <input
+                      type="text"
+                      placeholder="Nombre"
+                      value={nombreEditado}
+                      onChange={(e) => setNombreEditado(e.target.value)}
+                      className="form-input"
+                    />
+                  </td>
+                  <td>
+                    <input
+                      type="text"
+                      placeholder="Apellido"
+                      value={apellidoEditado}
+                      onChange={(e) => setApellidoEditado(e.target.value)}
+                      className="form-input"
+                    />
+                  </td>
+                  <td>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="DNI"
+                      value={dniEditado}
+                      onChange={(e) => setDniEditado(soloDigitos(e.target.value).slice(0, 8))}
+                      className="form-input"
+                    />
+                  </td>
+                  <td>
+                    <input
+                      type="text"
+                      placeholder="Teléfono"
+                      value={numeroEditado}
+                      onChange={(e) => setNumeroEditado(e.target.value)}
+                      className="form-input"
+                    />
+                  </td>
+                  <td>
+                    <input
+                      type="number"
+                      placeholder="Monto"
+                      value={montoEditado}
+                      onChange={(e) => setMontoEditado(e.target.value)}
+                      className="form-input"
+                    />
+                  </td>
+                  <td>
+                    {c.invitado ? (
+                      <span className="badge badge-respondio">
+                        ✉️ Invitado
+                        {c.fechaInvitacion ? ` · ${formatearFecha(c.fechaInvitacion).split(",")[0]}` : ""}
+                      </span>
+                    ) : (
+                      <span className="badge badge-neutro">Sin invitación</span>
+                    )}
+                  </td>
+                  <td>
+                    <span className={c.alta ? "badge badge-alta" : "badge badge-sin-alta"}>
+                      {c.alta ? "C/Alta" : "S/Alta"}
+                    </span>
+                  </td>
+                  <td>
+                    <div className="contacto-acciones">
+                      <button onClick={() => handleGuardarEdicion(c.id)} className="btn-guardar btn-chico">
+                        ✓ Guardar
+                      </button>
+                      <button onClick={() => setIdEditando(null)} className="btn-cancelar">
+                        Cancelar
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                /* FILA NORMAL */
+                <tr key={c.id}>
+                  <td>{c.nombre}</td>
+                  <td>{c.apellido || "—"}</td>
+                  <td>
+                    {c.dni ? (
+                      c.dni
+                    ) : (
                       <span
                         className="badge badge-sin-alta"
                         title="Sin DNI el bot no puede informarle su saldo"
@@ -424,19 +456,24 @@ export default function Contactos() {
                         ⚠️ Sin DNI
                       </span>
                     )}
+                  </td>
+                  <td>
+                    {c.numero}
                     {(() => {
                       const r = obtenerRespuesta(c.numero);
                       return r ? (
                         <span
-                          className="badge badge-respondio"
-                          title={`Último mensaje: ${formatearFecha(r.ultima)}`}
+                          className="icono-respondio"
+                          title={`Respondió (${r.cantidad}) · Último mensaje: ${formatearFecha(r.ultima)}`}
                         >
-                          💬 Respondió ({r.cantidad})
+                          {" "}
+                          💬
                         </span>
-                      ) : (
-                        <span className="badge badge-neutro">Sin respuesta</span>
-                      );
+                      ) : null;
                     })()}
+                  </td>
+                  <td className="celda-monto">${c.monto}</td>
+                  <td>
                     {c.invitado ? (
                       <span
                         className="badge badge-respondio"
@@ -446,55 +483,53 @@ export default function Contactos() {
                         {c.fechaInvitacion ? ` · ${formatearFecha(c.fechaInvitacion).split(",")[0]}` : ""}
                       </span>
                     ) : (
-                      <span className="badge badge-neutro">Sin invitar</span>
+                      <span className="badge badge-neutro">Sin invitación</span>
                     )}
+                  </td>
+                  <td>
                     {c.alta ? (
-                      <span className="badge badge-alta">
-                        ✅ Dada de alta{c.fechaAlta ? ` · ${formatearFecha(c.fechaAlta).split(",")[0]}` : ""}
+                      <span
+                        className="badge badge-alta"
+                        title={c.fechaAlta ? `Dada de alta el ${formatearFecha(c.fechaAlta).split(",")[0]}` : "Dada de alta"}
+                      >
+                        C/Alta
                       </span>
                     ) : (
-                      <span className="badge badge-sin-alta">⏳ Sin alta</span>
+                      <span className="badge badge-sin-alta">S/Alta</span>
                     )}
-                  </div>
-                </div>
-                <div className="contacto-acciones">
-                  {/*<button
-                    onClick={() => enviarMensajeWhatsApp(c)}
-                    className="btn-whatsapp"
-                  >
-                    📱 Mensaje
-                  </button>*/}
-                  <button
-                    onClick={() => toggleAlta(c)}
-                    className={c.alta ? "btn-alta btn-alta-quitar" : "btn-alta"}
-                  >
-                    {c.alta ? "Quitar alta" : "Dar de alta"}
-                  </button>
-                  <button
-                    onClick={() => activarEdicion(c)}
-                    className="btn-cancelar"
-                    style={{ backgroundColor: "#ffc107", color: "#000" }}
-                  >
-                    Editar
-                  </button>
-                  <button
-                    onClick={() => handleEliminar(c.id)}
-                    className="btn-eliminar"
-                  >
-                    Eliminar
-                  </button>
-                </div>
-              </li>
+                  </td>
+                  <td>
+                    <div className="contacto-acciones">
+                      <button
+                        onClick={() => toggleAlta(c)}
+                        className={c.alta ? "btn-alta btn-alta-quitar" : "btn-alta"}
+                      >
+                        {c.alta ? "Quitar alta" : "Dar de alta"}
+                      </button>
+                      <button
+                        onClick={() => activarEdicion(c)}
+                        className="btn-cancelar"
+                        style={{ backgroundColor: "#ffc107", color: "#000" }}
+                      >
+                        Editar
+                      </button>
+                      <button onClick={() => handleEliminar(c.id)} className="btn-eliminar">
+                        Eliminar
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              )
             )}
-          </React.Fragment>
-        ))}
+          </tbody>
+        </table>
         {contactos.length === 0 && (
           <p className="sin-contactos">No hay contactos registrados todavía.</p>
         )}
         {contactos.length > 0 && contactosFiltrados.length === 0 && (
           <p className="sin-contactos">Ningún contacto coincide con los filtros.</p>
         )}
-      </ul>
+      </div>
     </div>
   );
 }

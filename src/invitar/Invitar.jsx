@@ -6,6 +6,59 @@ import useAgenda from "../hooks/useAgenda";
 const formatearFecha = (iso) =>
   iso ? new Date(iso).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" }) : "";
 
+// ---------------------------------------------------------------------------
+// Plantillas de Meta disponibles. Para agregar otra, sumá un objeto acá.
+//  - templateName: nombre EXACTO en Meta (minúsculas y guiones bajos, sin espacios).
+//  - cuerpo: texto de la plantilla. {{nombre}} = nombre del contacto, {{2}} y {{3}} = variables del cuerpo.
+//  - tieneEncabezado: false si la plantilla no tiene variable en el encabezado.
+// ---------------------------------------------------------------------------
+const PLANTILLAS = [
+  {
+    id: "invitar",
+    etiqueta: "Invitar",
+    templateName: "invitacion2109",
+    languageCode: "es_AR",
+    tieneEncabezado: true,
+    tituloPorDefecto: "¡Abrí tu cuenta FARMANOR PAY!",
+    cuerpo: `Hola {{nombre}}, te saluda {{2}} de {{3}}. 👋
+
+Queremos invitarte a abrir tu cuenta FARMANOR PAY y disfrutar de estos beneficios:
+🔹 Compras en hasta 3 cuotas.
+🔹 15% de descuento pagando antes del día 15.
+🔹 Hasta 40% OFF en medicamentos seleccionados y promociones exclusivas.
+
+¿Qué necesitas para abrirla?
+Solo envianos por este medio foto de:
+1️⃣ DNI (frente y dorso).
+2️⃣ Un servicio (luz, agua, cable o internet).
+3️⃣ Comprobante de ingresos (recibo de sueldo, AUH, pensión o últimas 3 facturas si sos monotributista).
+
+¡Escribinos para cualquier consulta!`,
+  },
+  {
+    id: "invitar_nueva_opcion",
+    etiqueta: "Invitar nueva opción",
+    templateName: "invitacion",
+    languageCode: "es_AR",
+    tieneEncabezado: true,
+    tituloPorDefecto: "¡Abrí tu cuenta FARMANOR PAY!",
+    // TODO: reemplazá este texto por el texto exacto de la plantilla en Meta.
+    cuerpo: `Hola {{nombre}}, soy {{2}} de {{3}}. Para poder habilitar tu cuenta, solo necesitamos foto de tu DNI, un comprobante de servicio (luz o internet) y comprobante de ingresos (recibo de sueldo, AUH, pensión o las últimas 3 facturas si sos monotributista). Cualquier consulta, estoy a disposición. 👋`,
+  },
+];
+
+// Reemplaza los {{...}} del texto por los valores (resaltados) para la vista previa.
+const renderizarTexto = (texto, valores) =>
+  texto.split(/(\{\{\w+\}\})/g).map((parte, i) => {
+    const m = parte.match(/^\{\{(\w+)\}\}$/);
+    if (!m) return parte;
+    return (
+      <strong key={i} style={{ color: "#2563eb" }}>
+        {valores[m[1]] ?? parte}
+      </strong>
+    );
+  });
+
 export default function Invitar() {
   // La agenda viene del servidor (igual que en Cobrar), no del localStorage.
   const { contactos, error: errorAgenda, recargar } = useAgenda();
@@ -13,6 +66,10 @@ export default function Invitar() {
   const [seleccionados, setSeleccionados] = useState([]);
   // sinInvitar | invitados | todos. Al elegir uno se seleccionan justo esos contactos.
   const [filtro, setFiltro] = useState("sinInvitar");
+
+  // Plantilla de Meta elegida (se puede cambiar con los botones de arriba).
+  const [plantillaId, setPlantillaId] = useState(PLANTILLAS[0].id);
+  const plantilla = PLANTILLAS.find((p) => p.id === plantillaId) || PLANTILLAS[0];
 
   // Estados adaptados a las variables de la plantilla en Meta
   const [tituloVar, setTituloVar] = useState("");          // Header {{1}}
@@ -70,7 +127,7 @@ export default function Invitar() {
       return;
     }
 
-    const valTitulo = tituloVar.trim() || "¡Abrí tu cuenta FARMANOR PAY!";
+    const valTitulo = tituloVar.trim() || plantilla.tituloPorDefecto;
     const valCuerpo2 = textoAdicional.trim() || "el equipo";
     const valCuerpo3 = nombreNegocio.trim() || "FARMANOR";
 
@@ -86,11 +143,12 @@ export default function Invitar() {
       return {
         number: numeroLimpio,
         type: "template",
-        templateName: "invitacion2109", // NOMBRE DE TU PLANTILLA
-        languageCode: "es_AR",
+        templateName: plantilla.templateName,
+        languageCode: plantilla.languageCode,
         marcarInvitacion: true, // el servidor marca al cliente como "invitado" si el envío sale bien
         parameters: {
-          header: [valTitulo],                       // Header {{1}}
+          // Header {{1}} (solo si la plantilla lo tiene)
+          ...(plantilla.tieneEncabezado ? { header: [valTitulo] } : {}),
           body: [valCuerpo1, valCuerpo2, valCuerpo3] // Body {{1}}, Body {{2}} y Body {{3}}
         }
       };
@@ -126,24 +184,41 @@ export default function Invitar() {
     <div className="invitar-container">
       <h2 className="invitar-title">📧 Enviar Invitaciones Masivas</h2>
 
+      {/* Selector de plantilla de Meta */}
+      <div className="invitar-chips" role="group" aria-label="Plantilla de Meta">
+        {PLANTILLAS.map((p) => (
+          <button
+            key={p.id}
+            type="button"
+            className={`invitar-chip ${plantillaId === p.id ? "invitar-chip-activo" : ""}`}
+            onClick={() => setPlantillaId(p.id)}
+            disabled={cargando}
+          >
+            📄 {p.etiqueta}
+          </button>
+        ))}
+      </div>
+
       {/* Inputs para configurar las variables de la plantilla */}
       <div style={{ display: "flex", gap: "10px", marginBottom: "15px", flexWrap: "wrap" }}>
-        <div style={{ flex: 1, minWidth: "200px" }}>
-          <label
-            htmlFor="tituloVar"
-            style={{ display: "block", fontWeight: "bold", marginBottom: "5px", fontSize: "13px" }}
-          >
-            Título (Encabezado {"{{1}}"}):
-          </label>
-          <input
-            id="tituloVar"
-            type="text"
-            placeholder="ej: ¡Abrí tu cuenta FARMANOR PAY!"
-            value={tituloVar}
-            onChange={(e) => setTituloVar(e.target.value)}
-            style={{ width: "100%", padding: "8px", borderRadius: "5px", border: "1px solid #ccc", fontSize: "14px" }}
-          />
-        </div>
+        {plantilla.tieneEncabezado && (
+          <div style={{ flex: 1, minWidth: "200px" }}>
+            <label
+              htmlFor="tituloVar"
+              style={{ display: "block", fontWeight: "bold", marginBottom: "5px", fontSize: "13px" }}
+            >
+              Título (Encabezado {"{{1}}"}):
+            </label>
+            <input
+              id="tituloVar"
+              type="text"
+              placeholder="ej: ¡Abrí tu cuenta FARMANOR PAY!"
+              value={tituloVar}
+              onChange={(e) => setTituloVar(e.target.value)}
+              style={{ width: "100%", padding: "8px", borderRadius: "5px", border: "1px solid #ccc", fontSize: "14px" }}
+            />
+          </div>
+        )}
 
         <div style={{ flex: 1, minWidth: "200px" }}>
           <label
@@ -183,36 +258,22 @@ export default function Invitar() {
       {/* Vista previa de la Plantilla */}
       <div className="preview-box">
         <p style={{ margin: "0 0 5px 0", fontSize: "12px", color: "#666" }}>
-          <strong>Vista previa de la Plantilla:</strong>
+          <strong>Vista previa de la Plantilla:</strong> {plantilla.etiqueta}{" "}
+          <code style={{ fontSize: "11px", color: "#999" }}>({plantilla.templateName})</code>
         </p>
 
-        <h4 style={{ margin: "0 0 8px 0", color: "#007bff", fontStyle: "italic" }}>
-          {tituloVar.trim() || "{{1}}"}
-        </h4>
+        {plantilla.tieneEncabezado && (
+          <h4 style={{ margin: "0 0 8px 0", color: "#007bff", fontStyle: "italic" }}>
+            {tituloVar.trim() || "{{1}}"}
+          </h4>
+        )}
 
-        <div style={{ margin: 0, fontSize: "13px", lineHeight: "1.4", color: "#444" }}>
-          <p style={{ margin: "0 0 8px 0" }}>
-            Hola <strong style={{ color: "#2563eb" }}>{"{Nombre agendado}"}</strong>, te saluda{" "}
-            <strong style={{ color: "#2563eb" }}>{textoAdicional.trim() || "{{2}}"}</strong> de{" "}
-            <strong style={{ color: "#2563eb" }}>{nombreNegocio.trim() || "{{3}}"}</strong>. 👋
-          </p>
-
-          <p style={{ margin: "0 0 8px 0" }}>
-            Queremos invitarte a abrir tu cuenta FARMANOR PAY y disfrutar de estos beneficios:<br />
-            🔹 Compras en hasta 3 cuotas.<br />
-            🔹 15% de descuento pagando antes del día 15.<br />
-            🔹 Hasta 40% OFF en medicamentos seleccionados y promociones exclusivas.
-          </p>
-
-          <p style={{ margin: "0 0 8px 0" }}>
-            ¿Qué necesitas para abrirla?<br />
-            Solo envianos por este medio foto de:<br />
-            1️⃣ DNI (frente y dorso).<br />
-            2️⃣ Un servicio (luz, agua, cable o internet).<br />
-            3️⃣ Comprobante de ingresos (recibo de sueldo, AUH, pensión o últimas 3 facturas si sos monotributista).
-          </p>
-
-          <p style={{ margin: 0 }}>¡Escribinos para cualquier consulta!</p>
+        <div style={{ margin: 0, fontSize: "13px", lineHeight: "1.4", color: "#444", whiteSpace: "pre-line" }}>
+          {renderizarTexto(plantilla.cuerpo, {
+            nombre: "{Nombre agendado}",
+            2: textoAdicional.trim() || "{{2}}",
+            3: nombreNegocio.trim() || "{{3}}",
+          })}
         </div>
 
         <p style={{ margin: "10px 0 0 0", fontSize: "11px", color: "#999" }}>

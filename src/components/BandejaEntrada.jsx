@@ -191,11 +191,29 @@ export const BandejaEntrada = ({
     return mapa;
   }, [mensajes]);
 
-  // Agenda guardada en este navegador (se lee una vez por render).
-  // Si miro la bandeja de otro usuario, la agenda guardada acá es la mía, no la suya:
-  // en ese caso se usa siempre el nombre del perfil.
-  let agenda = [];
-  if (!usuarioVistoId) {
+  // Agenda de clientes guardada en el servidor (incluye los cargados desde Excel).
+  // Si miro la bandeja de otro usuario (o de todos), el admin trae la agenda de ese usuario.
+  const [agendaServidor, setAgendaServidor] = useState([]);
+  useEffect(() => {
+    let vigente = true;
+    (async () => {
+      try {
+        const res = await apiFetch(`/api/clientes${qsUsuario}`);
+        const data = await res.json().catch(() => ({}));
+        if (vigente && res.ok && data.success && Array.isArray(data.data)) setAgendaServidor(data.data);
+      } catch (error) {
+        console.error("Error al leer la agenda del servidor:", error.message);
+      }
+    })();
+    return () => {
+      vigente = false;
+    };
+  }, [qsUsuario]);
+
+  // Respaldo: si el servidor todavía no tiene agenda, se usa la guardada en este navegador
+  // (versión anterior). Solo en mi propia bandeja: en la de otro usuario no corresponde.
+  let agenda = agendaServidor;
+  if (agenda.length === 0 && !usuarioVistoId) {
     try {
       agenda = JSON.parse(localStorage.getItem(claveContactos())) || [];
     } catch (error) {
@@ -205,7 +223,6 @@ export const BandejaEntrada = ({
 
   const obtenerNombreAgendado = (msg) => {
     const perfil = perfiles.get(msg.from) || msg.from;
-    if (usuarioVistoId) return perfil;
     const numeroLimpio = String(msg.from || "").replace(/\D/g, "");
     if (!numeroLimpio) return perfil;
 

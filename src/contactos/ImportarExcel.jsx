@@ -165,8 +165,10 @@ export default function ImportarExcel({ importar }) {
             <a href="/plantilla-clientes.xlsx" download>
               Descargar plantilla
             </a>
-            . Si el teléfono ya está agendado, se <b>actualiza su monto a cobrar</b>; si lo tiene
-            otro usuario o el DNI está repetido, esa fila no se carga.
+            . Estos clientes <b>ya tienen la cuenta</b>: quedan con alta, se agendan para{" "}
+            <b>Cobrar</b> (no para Invitar) y el bot los reconoce por su teléfono. Si el teléfono
+            ya está agendado, se <b>actualiza su monto a cobrar</b>; si lo tiene otro usuario o el
+            DNI está repetido, esa fila no se carga.
           </small>
 
           <input
@@ -221,7 +223,7 @@ export default function ImportarExcel({ importar }) {
           {resultado && (
             <div className="importar-preview">
               <p>
-                ✅ Se cargaron <b>{resultado.importados}</b> cliente(s) nuevo(s).
+                ✅ Se cargaron <b>{resultado.importados}</b> cliente(s) nuevo(s), con alta y listos para cobrar.
                 {resultado.actualizados > 0 && (
                   <> Se actualizó el monto de <b>{resultado.actualizados}</b> cliente(s) que ya estaban.</>
                 )}

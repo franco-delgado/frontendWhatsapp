@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useEnviarWhatsApp } from "../hooks/useEnviarWhatsApp";
 import "./Invitar.css";
 import useAgenda from "../hooks/useAgenda";
@@ -61,7 +61,11 @@ const renderizarTexto = (texto, valores) =>
 
 export default function Invitar() {
   // La agenda viene del servidor (igual que en Cobrar), no del localStorage.
-  const { contactos, error: errorAgenda, recargar } = useAgenda();
+  const { contactos: agenda, error: errorAgenda, recargar } = useAgenda();
+
+  // Solo se invita a quienes todavía NO tienen cuenta. Los que tienen alta (por ejemplo los
+  // cargados desde Excel, que ya son clientes) se cobran desde "Cobrar" y no aparecen acá.
+  const contactos = useMemo(() => agenda.filter((c) => !c.alta), [agenda]);
 
   const [seleccionados, setSeleccionados] = useState([]);
   // sinInvitar | invitados | todos. Al elegir uno se seleccionan justo esos contactos.

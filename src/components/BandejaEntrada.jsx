@@ -3,7 +3,6 @@ import "./bandejaEntrada.css";
 import { ContestarMensaje } from './contestarMensaje';
 import { BotonNotificaciones } from './BotonNotificaciones';
 import { apiFetch, API_URL } from '../api';
-import { claveContactos } from '../contactosStorage';
 
 // ---------- Helpers de formato (solo presentación) ----------
 const COLORES_AVATAR = ['#5c6bc0', '#26a69a', '#ef6c00', '#8e24aa', '#00897b', '#d81b60', '#3949ab', '#6d4c41'];
@@ -210,16 +209,7 @@ export const BandejaEntrada = ({
     };
   }, [qsUsuario]);
 
-  // Respaldo: si el servidor todavía no tiene agenda, se usa la guardada en este navegador
-  // (versión anterior). Solo en mi propia bandeja: en la de otro usuario no corresponde.
-  let agenda = agendaServidor;
-  if (agenda.length === 0 && !usuarioVistoId) {
-    try {
-      agenda = JSON.parse(localStorage.getItem(claveContactos())) || [];
-    } catch (error) {
-      console.error("Error al leer contactos de localStorage:", error);
-    }
-  }
+  const agenda = agendaServidor;
 
   const obtenerNombreAgendado = (msg) => {
     const perfil = perfiles.get(msg.from) || msg.from;

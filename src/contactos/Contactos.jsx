@@ -15,6 +15,11 @@ const formatearFecha = (iso) =>
       })
     : "";
 
+// Texto del badge de invitación como UN solo string (un único nodo de texto): así React no
+// inserta/quita nodos de texto sueltos que el traductor del navegador pueda haber reemplazado.
+const textoInvitado = (c) =>
+  `✉️ Invitado${c.fechaInvitacion ? ` · ${formatearFecha(c.fechaInvitacion).split(",")[0]}` : ""}`;
+
 const soloDigitos = (v) => String(v ?? "").replace(/\D/g, "");
 const nombreCompleto = (c) => `${c.nombre} ${c.apellido || ""}`.trim();
 
@@ -259,8 +264,8 @@ export default function Contactos() {
 
       {/* Lista de Contactos */}
       <h3 className="lista-titulo">
-        Contactos Guardados ({hayFiltros ? `${contactosFiltrados.length} de ` : ""}
-        {contactos.length})
+        Contactos Guardados{" "}
+        <span>{`(${hayFiltros ? `${contactosFiltrados.length} de ` : ""}${contactos.length})`}</span>
       </h3>
 
       {error && (
@@ -417,8 +422,7 @@ export default function Contactos() {
                   <td>
                     {c.invitado ? (
                       <span className="badge badge-respondio">
-                        ✉️ Invitado
-                        {c.fechaInvitacion ? ` · ${formatearFecha(c.fechaInvitacion).split(",")[0]}` : ""}
+                        {textoInvitado(c)}
                       </span>
                     ) : (
                       <span className="badge badge-neutro">Sin invitación</span>
@@ -447,7 +451,7 @@ export default function Contactos() {
                   <td>{c.apellido || "—"}</td>
                   <td>
                     {c.dni ? (
-                      c.dni
+                      <span>{c.dni}</span>
                     ) : (
                       <span
                         className="badge badge-sin-alta"
@@ -458,7 +462,7 @@ export default function Contactos() {
                     )}
                   </td>
                   <td>
-                    {c.numero}
+                    <span>{c.numero}</span>
                     {(() => {
                       const r = obtenerRespuesta(c.numero);
                       return r ? (
@@ -479,8 +483,7 @@ export default function Contactos() {
                         className="badge badge-respondio"
                         title="Ya recibió la plantilla de invitación"
                       >
-                        ✉️ Invitado
-                        {c.fechaInvitacion ? ` · ${formatearFecha(c.fechaInvitacion).split(",")[0]}` : ""}
+                        {textoInvitado(c)}
                       </span>
                     ) : (
                       <span className="badge badge-neutro">Sin invitación</span>

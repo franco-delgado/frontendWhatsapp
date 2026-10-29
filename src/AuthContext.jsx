@@ -1,6 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { apiFetch, leerSesion, guardarSesion, borrarSesion } from './api';
-import { migrarContactosLegacy } from './contactosStorage';
 
 const AuthCtx = createContext(null);
 export const useAuth = () => useContext(AuthCtx);
@@ -18,7 +17,6 @@ export function AuthProvider({ children }) {
         if (!res.ok) return; // 401 ya cierra la sesión desde apiFetch
         const data = await res.json();
         guardarSesion({ ...sesion, usuario: data.usuario });
-        migrarContactosLegacy(data.usuario);
         setUsuario(data.usuario);
       })
       .catch(() => {}); // sin conexión: se sigue con lo guardado
@@ -38,7 +36,6 @@ export function AuthProvider({ children }) {
     const data = await res.json().catch(() => ({}));
     if (!res.ok || !data.success) throw new Error(data.error || 'No se pudo iniciar sesión.');
     guardarSesion({ token: data.token, usuario: data.usuario });
-    migrarContactosLegacy(data.usuario);
     setUsuario(data.usuario);
   }, []);
 

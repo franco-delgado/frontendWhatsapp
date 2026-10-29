@@ -1,9 +1,9 @@
-// Agenda de clientes guardada en el servidor (Supabase).
-// Reemplaza al localStorage: así el bot de WhatsApp también puede leer los datos
-// (por ejemplo, buscar un DNI y decirle al cliente cuánto debe).
+// Agenda de clientes guardada ÚNICAMENTE en Supabase (a través del backend).
+// Nombre, apellido, DNI, teléfono y monto: tanto los que se cargan de a uno como los que
+// llegan por Excel. El bot de WhatsApp lee la misma tabla (por ejemplo, busca un DNI y le
+// dice al cliente cuánto debe).
 import { useState, useEffect, useCallback } from "react";
 import { apiFetch } from "../api";
-import { claveContactos } from "../contactosStorage";
 
 async function leer(res) {
   const data = await res.json().catch(() => ({}));
@@ -13,31 +13,6 @@ async function leer(res) {
   return data;
 }
 
-// Si todavía tenés contactos en el navegador (versión anterior), se suben al servidor
-// UNA sola vez. La copia local no se borra: queda como respaldo.
-async function migrarDesdeLocalStorage() {
-  const clave = claveContactos();
-  if (localStorage.getItem(`${clave}_migrado`)) return false;
-
-  let locales = [];
-  try {
-    locales = JSON.parse(localStorage.getItem(clave)) || [];
-  } catch {
-    return false;
-  }
-  if (!Array.isArray(locales) || locales.length === 0) return false;
-
-  const data = await leer(
-    await apiFetch("/api/clientes/importar", {
-      method: "POST",
-      body: JSON.stringify({ contactos: locales }),
-    })
-  );
-  localStorage.setItem(`${clave}_migrado`, new Date().toISOString());
-  console.log(`[Agenda] Migrados al servidor: ${data.importados} (omitidos: ${data.omitidos}).`);
-  return true;
-}
-
 export default function useAgenda() {
   const [contactos, setContactos] = useState([]);
   const [cargando, setCargando] = useState(true);
@@ -45,10 +20,7 @@ export default function useAgenda() {
 
   const recargar = useCallback(async () => {
     try {
-      let { data } = await leer(await apiFetch("/api/clientes"));
-      if (data.length === 0 && (await migrarDesdeLocalStorage())) {
-        ({ data } = await leer(await apiFetch("/api/clientes")));
-      }
+      const { data } = await leer(await apiFetch("/api/clientes"));
       setContactos(data);
       setError(null);
     } catch (e) {
